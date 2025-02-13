@@ -64,6 +64,11 @@
   cursor: pointer;
 }
 
+
+.mt-6 {
+  margin-top: 7rem;
+}
+
 /* Responsive sidebar full width on mobile */
 @media (max-width: 42.67em) {
   .sidebar {
