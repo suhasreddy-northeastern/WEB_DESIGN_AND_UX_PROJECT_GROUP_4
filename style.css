@@ -1,13 +1,12 @@
-/* Sidebar styles */
 .sidebar {
   position: fixed;
   top: 0;
-  left: -100%; /* Ensure it's fully hidden */
-  width: 250px;
+  left: -100%;
+  width: 20%;
   height: 100%;
   background-color: #2c2c2c;
   color: white;
-  padding-top: 60px;
+  padding-top: 3.5rem;
   transition: left 0.4s ease-in-out;
   z-index: 1000;
 }
@@ -18,7 +17,7 @@
 }
 
 .sidebar ul li {
-  padding: 15px;
+  padding: 1rem;
   text-align: center;
 }
 
@@ -27,7 +26,7 @@
   color: white;
   display: block;
   transition: 0.3s;
-  font-size: 18px;
+  font-size: 1.1rem;
 }
 
 .sidebar ul li a:hover {
@@ -36,23 +35,22 @@
 
 .close-btn {
   position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 24px;
+  top: 0.6rem;
+  right: 1rem;
+  font-size: 1.5rem;
   background: none;
   border: none;
   color: white;
   cursor: pointer;
 }
 
-/* Navbar styling */
 .navbar {
   background-color: #2c2c2c;
-  padding: 10px 20px;
+  padding: 0.6rem 1.2rem;
 }
 
 .menu-btn {
-  font-size: 24px;
+  font-size: 1.5rem;
   background: none;
   border: none;
   color: white;
@@ -60,19 +58,19 @@
 }
 
 .profile-img {
-  width: 40px;
-  height: 40px;
+  width: 2rem;
+  height: 2rem;
   border-radius: 50%;
   cursor: pointer;
 }
 
-.settings {
-  margin-top: auto; /* Forces it to be at the bottom */
+
+.mt-6 {
+  margin-top: 7rem;
 }
 
-
 /* Responsive sidebar full width on mobile */
-@media (max-width: 768px) {
+@media (max-width: 42.67em) {
   .sidebar {
     width: 100%;
   }
