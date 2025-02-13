@@ -70,3 +70,50 @@
     width: 100%;
   }
 }
+
+
+      /* Custom styles to match the navbar */
+      .navbar {
+        background-color: #343a40; /* Dark background color */
+        color: white; /* Text color */
+      }
+
+      /* Flexbox layout to push footer to the bottom */
+      html, body {
+        height: 100%; /* Ensure the html and body take up full height */
+        margin: 0;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .content {
+        flex: 1; /* Allow content to grow and take up remaining space */
+      }
+
+      /* Footer styling */
+      .footer {
+        background-color: #343a40; /* Same as navbar */
+        color: white; /* Same as navbar */
+        padding: 20px 0; /* Increased padding for larger size */
+        text-align: center;
+        flex-shrink: 0; /* Prevent footer from shrinking */
+        font-size: 1.2rem; /* Increased font size */
+      }
+
+      .footer p {
+        margin: 0;
+      }
+
+      /* Button styling for dynamic controls */
+      .controls {
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .controls button {
+        margin: 5px;
+      }
+    
