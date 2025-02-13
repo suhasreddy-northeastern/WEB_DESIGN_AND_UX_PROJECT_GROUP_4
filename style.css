@@ -64,6 +64,15 @@
   cursor: pointer;
 }
 
+
+.mt-6 {
+  margin-top: 7rem;
+}
+
+.hero_content{
+  max-width:50%;
+}
+
 /* Responsive sidebar full width on mobile */
 @media (max-width: 42.67em) {
   .sidebar {
