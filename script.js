@@ -83,7 +83,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /* --------------------- Login Functionality --------------------- */
-  // This block runs only on the login page (which has a form with id "loginForm")
   if (document.getElementById("loginForm")) {
     const loginForm = document.getElementById("loginForm");
     loginForm.addEventListener("submit", function (event) {
@@ -144,7 +143,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 /* --------------------- Accordion Toggle Function --------------------- */
-// Exposed globally so that you can call it from your HTML if needed.
 window.toggleAccordion = function (collapseId) {
   const collapseElement = new bootstrap.Collapse(`#${collapseId}`, {
     toggle: true, // Toggles the collapse state (open/close)
