@@ -137,3 +137,6 @@
     height: 30%;
   }
 }
+.controls button {
+  margin: 5px;
+}
