@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Sidebar Toggle
   const sideBar = document.getElementById("sidebar");
   const menuBtn = document.querySelector(".menu-btn");
-  const closeBtn = document.querySelector(".close-btn");
+  const closeBtn = document.querySelector(".closeBtn");
 
   // Ensure elements exist before adding event listeners
   if (menuBtn && sideBar && closeBtn) {
@@ -141,7 +141,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 });
-
+/* --------------------- Tooltip Function --------------------- */
+const tooltipTriggerList = document.querySelectorAll(
+  '[data-bs-toggle="tooltip"]'
+);
+const tooltipList = [...tooltipTriggerList].map(
+  (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
+);
 /* --------------------- Accordion Toggle Function --------------------- */
 window.toggleAccordion = function (collapseId) {
   const collapseElement = new bootstrap.Collapse(`#${collapseId}`, {
