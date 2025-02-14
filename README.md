@@ -2,9 +2,9 @@
 # FlowPay
 
 ## Purpose
-FlowPay is a comprehensive financial management platform that combines splitwise-style expense sharing with robust loan tracking and analytics. The website enables users to:
+FlowPay is a financial management platform designed specifically for international students on F-1 visas in the U.S. Managing finances while studying abroad can be challenging, and FlowPay simplifies the process by offering:
 - **Track shared expenses:** Easily split bills and manage group expenses.
-- **Manage loans:** Keep an organized record of personal, borrowed, or even mortgage loans.
+- **Manage loans:** Keep an organized record of loans taken from sponsors or banks with tailored repayment plans to reduce interest and improve financial planning.
 - **Monitor credit rewards:** Optimize your credit card rewards and earn points.
 - **Set reminders:** Stay on top of upcoming due dates and financial obligations.
 
@@ -27,5 +27,3 @@ The project incorporates **12 Bootstrap components** to create a modern, respons
 12. **Jumbotron (Hero Section):** Creates an engaging, full-width hero section on the homepage to capture user attention.
 
 ---
-
-Feel free to modify or expand on this README to better suit your project details and any additional features you might implement!
