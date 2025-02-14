@@ -1,101 +1,111 @@
 // Signup Page Functionality
-if (document.getElementById('password')) {
-    const passwordInput = document.getElementById("password");
-    const confirmPasswordInput = document.getElementById("confirm-password");
-    const errorMessage = document.getElementById("password-error");
-    const passwordRequirements = document.getElementById("password-requirements");
+if (document.getElementById("password")) {
+  const passwordInput = document.getElementById("password");
+  const confirmPasswordInput = document.getElementById("confirm-password");
+  const errorMessage = document.getElementById("password-error");
+  const passwordRequirements = document.getElementById("password-requirements");
 
-    passwordInput?.addEventListener("focus", () => {
-        passwordRequirements.style.display = "block";
+  passwordInput?.addEventListener("focus", () => {
+    passwordRequirements.style.display = "block";
+  });
+
+  passwordInput?.addEventListener("input", function () {
+    const password = passwordInput.value;
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+
+    Object.keys(checks).forEach((key) => {
+      document.getElementById(key).className = checks[key]
+        ? "valid"
+        : "invalid";
     });
 
-    passwordInput?.addEventListener("input", function() {
-        const password = passwordInput.value;
-        const checks = {
-            length: password.length >= 8,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
-            number: /[0-9]/.test(password),
-            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-        };
+    checkPasswordMatch();
+  });
 
-        Object.keys(checks).forEach(key => {
-            document.getElementById(key).className = checks[key] ? "valid" : "invalid";
-        });
+  confirmPasswordInput?.addEventListener("input", checkPasswordMatch);
 
-        checkPasswordMatch();
-    });
+  function checkPasswordMatch() {
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
 
-    confirmPasswordInput?.addEventListener("input", checkPasswordMatch);
+    if (confirmPassword && password !== confirmPassword) {
+      errorMessage.textContent = "Passwords do not match!";
+      errorMessage.style.display = "block";
+    } else {
+      errorMessage.style.display = "none";
+    }
+  }
 
-    function checkPasswordMatch() {
-        const password = passwordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
+  window.togglePasswordVisibility = function () {
+    const type =
+      passwordInput.getAttribute("type") === "password" ? "text" : "password";
+    passwordInput.setAttribute("type", type);
+    confirmPasswordInput.setAttribute("type", type);
+  };
 
-        if (confirmPassword && password !== confirmPassword) {
-            errorMessage.textContent = "Passwords do not match!";
-            errorMessage.style.display = "block";
-        } else {
-            errorMessage.style.display = "none";
-        }
+  window.validatePasswords = function () {
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+
+    if (!Object.values(checks).every(Boolean)) {
+      errorMessage.textContent = "Password does not meet all requirements.";
+      errorMessage.style.display = "block";
+      return false;
     }
 
-    window.togglePasswordVisibility = function() {
-        const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
-        passwordInput.setAttribute("type", type);
-        confirmPasswordInput.setAttribute("type", type);
-    };
+    if (password !== confirmPassword) {
+      errorMessage.textContent = "Passwords do not match!";
+      errorMessage.style.display = "block";
+      return false;
+    }
 
-    window.validatePasswords = function() {
-        const password = passwordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
-        const checks = {
-            length: password.length >= 8,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
-            number: /[0-9]/.test(password),
-            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-        };
-
-        if (!Object.values(checks).every(Boolean)) {
-            errorMessage.textContent = "Password does not meet all requirements.";
-            errorMessage.style.display = "block";
-            return false;
-        }
-
-        if (password !== confirmPassword) {
-            errorMessage.textContent = "Passwords do not match!";
-            errorMessage.style.display = "block";
-            return false;
-        }
-
-        return true;
-    };
+    return true;
+  };
 }
 
 // Login Page Functionality
-if (document.getElementById('loginForm')) {
-    document.getElementById("loginForm").addEventListener("submit", function(event) {
-        event.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const emailError = document.getElementById("emailError");
-        const passwordError = document.getElementById("passwordError");
-        const errorAlert = document.getElementById("errorAlert");
+if (document.getElementById("loginForm")) {
+  document
+    .getElementById("loginForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const emailError = document.getElementById("emailError");
+      const passwordError = document.getElementById("passwordError");
 
-        emailError.textContent = "";
-        passwordError.textContent = "";
-        errorAlert.classList.add("d-none");
+      // Clear previous errors
+      emailError.textContent = "";
+      passwordError.textContent = "";
 
-        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        const passwordValid = password.length >= 8;
+      // Validate inputs
+      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      const passwordValid = password.length >= 8;
 
-        if (!emailValid) emailError.textContent = "Please enter a valid email address.";
-        if (!passwordValid) passwordError.textContent = "Password must be at least 8 characters.";
+      // Display individual errors if any
+      if (!emailValid) {
+        emailError.textContent = "Please enter a valid email address.";
+      }
+      if (!passwordValid) {
+        passwordError.textContent = "Password must be at least 8 characters.";
+      }
 
-        if (!emailValid || !passwordValid) return;
-        
-        // Simulate failed login
-        errorAlert.classList.remove("d-none");
+      // Redirect if valid
+      if (emailValid && passwordValid) {
+        window.location.href = "index.html";
+      }
     });
 }
