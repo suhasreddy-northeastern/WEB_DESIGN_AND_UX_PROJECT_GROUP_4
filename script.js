@@ -9,11 +9,9 @@ menuBtn.addEventListener("click", () => {
 closeBtn.addEventListener("click", () => {
   sideBar.style.left = "-100%";
 });
-
       // Function to toggle accordion items dynamically
       function toggleAccordion(collapseId) {
         const collapseElement = new bootstrap.Collapse(`#${collapseId}`, {
           toggle: true, // Toggles the collapse state (open/close)
         });
       }
-    

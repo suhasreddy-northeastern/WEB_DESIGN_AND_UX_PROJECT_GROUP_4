@@ -9,35 +9,48 @@
     <link rel="stylesheet" href="styles/signup.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container d-flex justify-content-center align-items-center vh-100">
         <div class="signup-container">
-            <h2 class="text-center mb-4">Sign Up</h2>
+            <div class="text-center mb-3">
+                <img src="images/logo.png" alt="FlowPay Logo" class="logo">
+                <h2 class="text-muted text-center">Sign up</h2>
+                <br>
+            </div>
             <form onsubmit="return validatePasswords()">
-                <div class="mb-3">
-                    <label for="first-name" class="form-label">First Name</label>
-                    <input type="text" class="form-control" id="first-name" placeholder="Enter your first name" required>
+                <div class="row">
+                    <!-- First Name & Last Name Row -->
+                    <div class="col-md-6 mb-3">
+                        <label for="first-name" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="first-name" placeholder="Enter your first name" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="last-name" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="last-name" placeholder="Enter your last name" required>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label for="last-name" class="form-label">Last Name</label>
-                    <input type="text" class="form-control" id="last-name" placeholder="Enter your last name" required>
+
+                <!-- Date of Birth & Email Row -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="dob" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" id="dob" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" placeholder="Enter your email" required>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label for="dob" class="form-label">Date of Birth</label>
-                    <input type="date" class="form-control" id="dob" required>
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email address</label>
-                    <input type="email" class="form-control" id="email" placeholder="Enter your email" required>
-                </div>
-                <div class="mb-3 row">
-                    <div class="col-md-6">
+
+                <!-- Password Section -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
                         <label for="password" class="form-label">Password</label>
                         <div class="input-group">
                             <input type="password" class="form-control" id="password" placeholder="Enter your password" required>
                             <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()">👁️</button>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 mb-3">
                         <div id="password-requirements" style="display: none;">
                             <p class="mb-1">Password must contain:</p>
                             <ul>
@@ -50,8 +63,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="mb-3 row">
-                    <div class="col-md-6">
+
+                <!-- Confirm Password -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
                         <label for="confirm-password" class="form-label">Confirm Password</label>
                         <input type="password" class="form-control" id="confirm-password" placeholder="Re-enter your password" required>
                     </div>
@@ -59,6 +74,7 @@
                         <p id="password-error" class="text-danger mb-0" style="display: none;"></p>
                     </div>
                 </div>
+
                 <button type="submit" class="btn btn-custom w-100">Sign Up</button>
             </form>
             <p class="text-center mt-3">
