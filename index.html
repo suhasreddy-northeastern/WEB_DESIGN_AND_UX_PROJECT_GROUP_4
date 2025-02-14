@@ -18,7 +18,21 @@
       class="navbar navbar-dark d-flex justify-content-between align-items-center px-3 py-3"
     >
       <button class="menu-btn"><i class="fa-solid fa-bars"></i></button>
-      <img src="./images/profile.webp" alt="Profile" class="profile-img" />
+      <div class="dropstart">
+        <button
+          class="btn btn-secondary dropdown-toggle"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          <img src="./images/profile.webp" alt="Profile" class="profile-img" />
+        </button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="#">View Profile</a></li>
+          <li><a class="dropdown-item" href="#">Edit Profile</a></li>
+          <li><a class="dropdown-item" href="#">Help & Support </a></li>
+        </ul>
+      </div>
     </nav>
 
     <!-- SIDEBAR -->
@@ -29,19 +43,32 @@
           alt="logo"
           class="sidebar_logo_image"
         />
-        <button class="close-btn position-absolute">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+        <div data-bs-theme="dark" class="closeBtn">
+          <button
+            type="button"
+            class="btn-close closeBtn"
+            aria-label="Close"
+          ></button>
+        </div>
       </div>
-      <ul>
-        <li class="p-3"><a href="#">Home</a></li>
-        <li class="p-3"><a href="#">Loans</a></li>
-        <li class="p-3"><a href="#">Expenses</a></li>
-        <li class="p-3"><a href="#">Settings</a></li>
+      <ul class="nav d-flex flex-column justify-content-center">
+        <li class="nav-item p-3"><a href="#">Home</a></li>
+        <li class="nav-item p-3"><a href="#">Loans</a></li>
+        <li class="nav-item p-3"><a href="#">Expenses</a></li>
+        <li class="nav-item p-3"><a href="#">Settings</a></li>
       </ul>
     </aside>
 
-    <main>
+    <div
+      id="spinner"
+      class="d-flex justify-content-center align-items-center vh-100"
+    >
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <main style="display: none">
       <section class="mx-auto p-4 mt-6 text-center hero_content">
         <div class="jumbotron">
           <h1>Manage your finances with ease</h1>
@@ -49,7 +76,13 @@
             Track expenses, manage loans, earn rewards, and set reminders all in
             one place.
           </h4>
-          <button type="button" class="btn btn-primary my-3">
+          <button
+            type="button"
+            class="btn btn-primary my-3"
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Click to get started"
+          >
             Get Started
           </button>
         </div>
@@ -166,6 +199,57 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="carousel_container mx-auto">
+        <h1 class="text-center mb-3">Testimonials</h1>
+        <div
+          id="testimonialCarousel"
+          class="carousel slide"
+          data-bs-ride="carousel"
+        >
+          <div class="carousel-inner">
+            <div class="carousel-item active">
+              <div class="card p-4 text-center">
+                <p class="lead">
+                  "This app made it so easy to manage my student loans and
+                  shared expenses!"
+                </p>
+                <h5>- Alex Johnson</h5>
+              </div>
+            </div>
+            <div class="carousel-item">
+              <div class="card p-4 text-center">
+                <p class="lead">
+                  "A must-have for students! Splitting bills is effortless now."
+                </p>
+                <h5>- Priya Sharma</h5>
+              </div>
+            </div>
+            <div class="carousel-item">
+              <div class="card p-4 text-center">
+                <p class="lead">"The loan tracking feature is a lifesaver!"</p>
+                <h5>- Michael Lee</h5>
+              </div>
+            </div>
+          </div>
+          <button
+            class="carousel-control-prev"
+            type="button"
+            data-bs-target="#testimonialCarousel"
+            data-bs-slide="prev"
+          >
+            <span class="carousel-control-prev-icon"></span>
+          </button>
+          <button
+            class="carousel-control-next"
+            type="button"
+            data-bs-target="#testimonialCarousel"
+            data-bs-slide="next"
+          >
+            <span class="carousel-control-next-icon"></span>
+          </button>
         </div>
       </section>
     </main>

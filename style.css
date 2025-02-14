@@ -32,14 +32,12 @@
   background-color: #495057;
 }
 
-.close-btn {
+.btn-close {
   position: absolute;
   right: 1rem;
   top: 0.6rem;
-  font-size: 1.5rem;
-  background: none;
   border: none;
-  color: white;
+  color: #fff;
   cursor: pointer;
 }
 
@@ -116,6 +114,17 @@
 .sidebar_logo_image {
   width: 50%;
   height: 50%;
+}
+
+.carousel_container {
+  max-width: 45%;
+  margin-bottom: 5rem;
+  margin-top: 5rem;
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+  filter: invert(100%);
 }
 
 @media (max-width: 42.67em) {
