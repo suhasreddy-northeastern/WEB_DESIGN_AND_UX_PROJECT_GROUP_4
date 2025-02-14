@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
   /* --------------------- Signup Functionality --------------------- */
-  // This block runs only on pages that include a "confirm-password" input (i.e. the signup page)
   if (document.getElementById("confirm-password")) {
     const passwordInput = document.getElementById("password");
     const confirmPasswordInput = document.getElementById("confirm-password");
