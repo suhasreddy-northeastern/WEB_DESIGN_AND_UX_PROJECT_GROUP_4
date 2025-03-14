@@ -1,2 +1,1 @@
-# WEB_DESIGN_AND_UX_PROJECT_GROUP_4
-This is our project repo
+Changing to AI based Apartment Search website - homefit
