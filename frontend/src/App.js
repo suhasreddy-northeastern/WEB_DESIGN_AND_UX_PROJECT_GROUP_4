@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Questionnaire from './pages/Questionnaire'; // Import the Questionnaire page
 
 function App() {
   const [message, setMessage] = useState("");
@@ -10,7 +11,12 @@ function App() {
       .catch(error => console.log(error));
   }, []);
 
-  return <h1>{message}</h1>;
+  return (
+    <div>
+      <h1>{message}</h1>
+      <Questionnaire /> {/* Render your Questionnaire component here */}
+    </div>
+  );
 }
 
 export default App;
