@@ -1,14 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Navbar, Nav, Container, Button, Image } from 'react-bootstrap';
 
 const CustomNavbar = () => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Detect dark mode from system preference
+    const darkModePreference = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDarkMode(darkModePreference);
+  }, []);
+
+  const logoSrc = isDarkMode ? '/Logo.jpg' : '/LogoDark.jpg';
+
   return (
-    <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
+    <Navbar bg={isDarkMode ? "dark" : "light"} variant={isDarkMode ? "dark" : "light"} expand="lg" className="shadow-sm">
       <Container>
-        {/* Brand Logo */}
+        {/* Brand Logo with Rounded Edges */}
         <Navbar.Brand as={Link} to="/">
-          HomeFit
+          <Image 
+            src={logoSrc} 
+            alt="HomeFit Logo" 
+            height="40" 
+            className="rounded"
+          />
         </Navbar.Brand>
 
         {/* Navbar Toggle (for mobile view) */}
@@ -35,4 +50,3 @@ const CustomNavbar = () => {
 };
 
 export default CustomNavbar;
- 

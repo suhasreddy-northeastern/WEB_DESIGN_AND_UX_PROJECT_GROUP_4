@@ -22,7 +22,7 @@ function App() {
         <Route path="/questionnaire" element={<QuestionnairePage />} /> {/* Add this route */}
       </Routes>
     </div>
-  );git 
+  );
 }
 
 export default App;
