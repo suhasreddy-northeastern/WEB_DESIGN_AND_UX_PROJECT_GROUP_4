@@ -1,0 +1,432 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "User API",
+      "version": "1.0.0",
+      "description": "API for managing users and image uploads"
+    },
+    "servers": [
+      {
+        "url": "http://localhost:4000",
+        "description": "Local development server"
+      }
+    ],
+    "paths": {
+      "/user/create": {
+        "post": {
+          "summary": "Create a new user",
+          "description": "Creates a new user with full name, email, and password",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCreate"
+                },
+                "example": {
+                  "fullName": "John Doe",
+                  "email": "john.doe@example.com",
+                  "password": "Password1!"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "User created successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "example": "User created successfully."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation failed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/user/edit": {
+        "put": {
+          "summary": "Update user details",
+          "description": "Updates an existing user's full name and/or password",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserUpdate"
+                },
+                "example": {
+                  "email": "john.doe@example.com",
+                  "fullName": "John D. Doe",
+                  "password": "NewPassword1!"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "example": "User updated successfully."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation failed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/user/delete": {
+        "delete": {
+          "summary": "Delete user",
+          "description": "Deletes a user by their email",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  },
+                  "required": ["email"]
+                },
+                "example": {
+                  "email": "john.doe@example.com"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User deleted successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "example": "User deleted successfully."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/user/getAll": {
+        "get": {
+          "summary": "Get all users",
+          "description": "Retrieves a list of all users with their full names and email addresses",
+          "responses": {
+            "200": {
+              "description": "List of users",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "users": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/UserBasic"
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "users": [
+                      {
+                        "fullName": "John Doe",
+                        "email": "john.doe@example.com"
+                      },
+                      {
+                        "fullName": "Jane Smith",
+                        "email": "jane.smith@example.com"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/user/uploadImage": {
+        "post": {
+          "summary": "Upload user image",
+          "description": "Uploads an image for a specific user",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "image": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  },
+                  "required": ["email", "image"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Image uploaded successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      },
+                      "filePath": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "example": {
+                    "message": "Image uploaded successfully.",
+                    "filePath": "/images/john.doe@example.com-1647859352546-123456789.jpg"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid file or image already exists",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/user/login": {
+        "post": {
+          "summary": "User authentication",
+          "description": "Authenticates a user with email and password",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "password": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["email", "password"]
+                },
+                "example": {
+                  "email": "john.doe@example.com",
+                  "password": "Password1!"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Authentication successful",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      },
+                      "user": {
+                        "$ref": "#/components/schemas/UserBasic"
+                      }
+                    }
+                  },
+                  "example": {
+                    "message": "Authentication successful.",
+                    "user": {
+                      "fullName": "John Doe",
+                      "email": "john.doe@example.com"
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Invalid credentials",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "UserCreate": {
+          "type": "object",
+          "properties": {
+            "fullName": {
+              "type": "string",
+              "description": "User's full name (alphabetic characters only)"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "User's email address"
+            },
+            "password": {
+              "type": "string",
+              "description": "User's password (min 8 chars, including uppercase, lowercase, number, special char)"
+            }
+          },
+          "required": ["fullName", "email", "password"]
+        },
+        "UserUpdate": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "User's email address (used for identification, cannot be updated)"
+            },
+            "fullName": {
+              "type": "string",
+              "description": "User's full name (alphabetic characters only)"
+            },
+            "password": {
+              "type": "string",
+              "description": "User's password (min 8 chars, including uppercase, lowercase, number, special char)"
+            }
+          },
+          "required": ["email"]
+        },
+        "UserBasic": {
+          "type": "object",
+          "properties": {
+            "fullName": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            }
+          }
+        },
+        "ErrorResponse": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "details": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
