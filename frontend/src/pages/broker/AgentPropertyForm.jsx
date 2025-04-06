@@ -13,6 +13,7 @@ import {
   Checkbox,
   Button,
   TextField,
+  useTheme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import axios from "axios";
@@ -28,8 +29,11 @@ const FormContainer = styled(Paper)(({ theme }) => ({
   margin: "auto",
   padding: theme.spacing(4),
   borderRadius: 16,
-  backgroundColor: "#ffffff",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.palette.mode === 'light' 
+    ? "0 4px 20px rgba(0,0,0,0.05)" 
+    : "0 4px 20px rgba(0,0,0,0.2)",
+  border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
 }));
 
 const amenitiesList = [
@@ -137,6 +141,10 @@ const fieldGroups = [
 ];
 
 const AgentApartmentForm = () => {
+  const theme = useTheme();
+  const primaryColor = "#00b386";
+  const isDarkMode = theme.palette.mode === 'dark';
+  
   const [formData, setFormData] = useState({
     amenities: [],
     images: [],
@@ -193,11 +201,11 @@ const AgentApartmentForm = () => {
 
   return (
     <Box sx={{ my: 10, px: 2 }}>
-      <FormContainer elevation={3}>
+      <FormContainer elevation={isDarkMode ? 2 : 3}>
         <Typography
           variant="h5"
           fontWeight={600}
-          color="#00b386"
+          color={primaryColor}
           textAlign="center"
           gutterBottom
         >
@@ -207,7 +215,7 @@ const AgentApartmentForm = () => {
         <form onSubmit={handleSubmit} encType="multipart/form-data">
           {fieldGroups.map((group, idx) => (
             <Box mt={4} key={idx}>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom color="text.primary">
                 {group.title}
               </Typography>
               <Grid container spacing={3}>
@@ -217,7 +225,7 @@ const AgentApartmentForm = () => {
                       <FormControl component="fieldset" fullWidth>
                         <FormLabel
                           component="legend"
-                          sx={{ fontSize: 14, mb: 1 }}
+                          sx={{ fontSize: 14, mb: 1, color: 'text.secondary' }}
                         >
                           {field.label}
                         </FormLabel>
@@ -234,12 +242,13 @@ const AgentApartmentForm = () => {
                               control={
                                 <Radio
                                   sx={{
-                                    color: "#00b386",
-                                    "&.Mui-checked": { color: "#00b386" },
+                                    color: isDarkMode ? 'rgba(0, 179, 134, 0.7)' : primaryColor,
+                                    "&.Mui-checked": { color: primaryColor },
                                   }}
                                 />
                               }
                               label={opt}
+                              sx={{ color: 'text.primary' }}
                             />
                           ))}
                         </RadioGroup>
@@ -255,6 +264,19 @@ const AgentApartmentForm = () => {
                         InputLabelProps={
                           field.type === "date" ? { shrink: true } : {}
                         }
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            '& fieldset': {
+                              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.23)',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.33)',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: primaryColor,
+                            },
+                          },
+                        }}
                       />
                     )}
                   </Grid>
@@ -264,7 +286,7 @@ const AgentApartmentForm = () => {
           ))}
 
           <Box mt={5}>
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom color="text.primary">
               Amenities
             </Typography>
             <FormGroup row>
@@ -277,19 +299,20 @@ const AgentApartmentForm = () => {
                       onChange={handleCheckboxChange}
                       name={name}
                       sx={{
-                        color: "#00b386",
-                        "&.Mui-checked": { color: "#00b386" },
+                        color: isDarkMode ? 'rgba(0, 179, 134, 0.7)' : primaryColor,
+                        "&.Mui-checked": { color: primaryColor },
                       }}
                     />
                   }
                   label={name}
+                  sx={{ color: 'text.primary' }}
                 />
               ))}
             </FormGroup>
           </Box>
 
           <Box mt={4}>
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom color="text.primary">
               <PhotoCameraIcon sx={{ mr: 1 }} /> Upload Apartment Images
             </Typography>
             <input
@@ -297,7 +320,10 @@ const AgentApartmentForm = () => {
               multiple
               accept="image/*"
               onChange={handleFileChange}
-              style={{ marginTop: 8 }}
+              style={{ 
+                marginTop: 8,
+                color: theme.palette.text.primary
+              }}
             />
           </Box>
 
@@ -312,7 +338,7 @@ const AgentApartmentForm = () => {
                 borderRadius: 3,
                 fontSize: "1rem",
                 fontWeight: 600,
-                backgroundColor: "#00b386",
+                backgroundColor: primaryColor,
                 "&:hover": { backgroundColor: "#009e75" },
               }}
             >

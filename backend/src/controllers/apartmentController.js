@@ -8,7 +8,24 @@ const axios = require("axios");
 // 📦 Create Apartment
 exports.createApartment = async (req, res) => {
   try {
-    const apartment = await Apartment.create(req.body);
+    // Add broker email from session
+    const brokerEmail = req.session?.user?.email;
+    if (!brokerEmail) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    // Check if user is a broker
+    if (req.session.user.type !== 'broker') {
+      return res.status(403).json({ message: "Only brokers can create listings" });
+    }
+
+    // Add broker email to the apartment data
+    const apartmentData = {
+      ...req.body,
+      brokerEmail
+    };
+
+    const apartment = await Apartment.create(apartmentData);
     res.status(201).json(apartment);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -67,5 +84,30 @@ exports.generateTitleController = async (req, res) => {
   } catch (error) {
     console.error("Title generation error:", error);
     res.status(500).json({ error: "Failed to generate title" });
+  }
+};
+
+// ✏️ Update Apartment Listing
+exports.updateApartment = async (req, res) => {
+  try {
+    const apartmentId = req.params.id;
+    const brokerEmail = req.session?.user?.email;
+
+    if (!brokerEmail) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    // Check if the listing belongs to the logged-in broker
+    const apartment = await Apartment.findById(apartmentId);
+    if (!apartment || apartment.brokerEmail !== brokerEmail) {
+      return res.status(403).json({ message: "Not authorized to update this listing" });
+    }
+
+    // Update apartment with provided data
+    const updated = await Apartment.findByIdAndUpdate(apartmentId, req.body, { new: true });
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Failed to update apartment" });
   }
 };
