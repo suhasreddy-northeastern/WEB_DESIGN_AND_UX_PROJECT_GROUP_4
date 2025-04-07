@@ -1,66 +1,74 @@
-# WEB DESIGN AND UX PROJECT GROUP 4
+# 🏠 HomeFit – Apartment Finder & Broker Portal
 
-This project is a web application built using **React**, **Node.js**, and **MongoDB**. It is designed for managing the backend and frontend of a web app, with concurrent running and MongoDB for data storage.
+**HomeFit** is a full-stack web application that connects renters with apartment listings while offering an internal broker and admin management system. The platform supports listing management, broker registration and approval workflows, user preferences, and smart apartment matching.
 
-## Getting Started
+---
 
-Follow these steps to get your local development environment up and running.
+## 🚀 Features
 
-### Prerequisites
+### ✅ User-Facing
+- 👥 User Signup/Login
+- 📋 Preference-based apartment matching
+- 💾 Save and view favorite listings
+- 🧠 AI-assisted apartment match explanations (via Groq API)
+- 📞 Inquiry system to contact brokers
 
-* Node.js (v16 or later)
-* npm (Node Package Manager)
-* MongoDB Atlas account for database hosting (or local MongoDB installation)
-* Git (for version control)
+### 🧑‍💼 Broker Dashboard
+- 📝 Multi-step broker registration with license verification
+- 🔐 Pending approval system (admin approval required)
+- 🏢 Add, manage, and delete listings
+- 📩 View and respond to listing inquiries
+- 📊 View listing performance and analytics
+- 👤 Profile management and document upload
 
-### Setting up the Backend
+### 👨‍💻 Admin Dashboard
+- 🔍 View/manage all brokers, users, and listings
+- ✅ Approve or reject broker registrations
+- 🧾 Download and view license documents
 
-1. **Clone the repository** (if you haven't already):
-   ```bash
-   git clone https://github.com/suhasreddy-northeastern/WEB_DESIGN_AND_UX_PROJECT_GROUP_4.git
-   ```
+---
 
-2. **Navigate to the backend directory**:
-   ```bash
-   cd backend
-   ```
+## 🧱 Tech Stack
 
-3. **Install the dependencies**:
-   ```bash
-   npm install
-   ```
+| Frontend              | Backend              | Database       | Miscellaneous              |
+|----------------------|----------------------|----------------|----------------------------|
+| React + MUI + Redux  | Express.js (Node.js) | MongoDB        | Multer (file upload), bcrypt, Axios, Groq API |
 
-4. **Create a `.env` file** in the `backend` folder (you can use `.env.example` as a reference) and add your MongoDB URI and other necessary environment variables:
-   ```
-   MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/<dbname>?retryWrites=true&w=majority
-   PORT=5001
-   ```
-   Replace `<username>`, `<password>`, and `<dbname>` with your MongoDB Atlas credentials and database name.
+---
 
-5. **Start the server**:
-   ```bash
-   npm run dev
-   ```
-   This will run the backend on **http://localhost:5001** (or the port you specified).
+## 🛠️ Installation
 
-### Setting up the Frontend
+### 1. Clone the repository
 
-1. **Navigate to the frontend directory**:
-   ```bash
-   cd ../frontend
-   ```
+```bash
+git clone https://github.com/your-username/homefit.git
+```
+```
+cd homefit
+```
+### 2. Setup the server
+```bash
+cd backend
+npm install
+```
+### Create a .env file and include:
+``` bash
+.env
+PORT=4000
+MONGODB_URI=mongodb://localhost:27017/homefit
+SESSION_SECRET=your_secret_here
+```
+### Start the server:
 
-2. **Install the dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start the frontend**:
-   ```bash
-   npm start
-   ```
-   This will start the frontend on **http://localhost:3000** by default.
-
+```bash
+npm run dev
+```
+### 3. Setup the frontend
+```bash
+cd frontend
+npm install
+npm start
+```
 ## Running Both Backend and Frontend Concurrently
 
 To run both the backend and frontend simultaneously:
@@ -86,4 +94,87 @@ To run both the backend and frontend simultaneously:
    npm run dev
    ```
    This will start both the frontend and backend concurrently.
+
+### 🗂️ Project Structure
+```
+/frontend
+  └── components/
+  └── pages/
+  └── redux/
+  └── utils/
+  └── App.js
+  └── index.js
+
+/backend
+  └── controllers/
+  |    └── brokerController.js
+  |    └── userController.js
+  └── middleware/
+  |    └── checkAuth.js
+  |    └── checkApprovedBroker.js
+  └── models/
+  |    └── User.js
+  |    └── Apartment.js
+  |    └── Inquiry.js
+  └── routes/
+  |    └── brokerRoutes.js
+  |    └── userRoutes.js
+  |    └── adminRoutes.js
+  └── uploads/   (stores license documents)
+  └── server.js
+  ```
+
+### 📄 API Highlights
+```
+/api/broker/register
+```
+Register broker with document upload
+
+```
+/api/broker/me
+```
+Get broker profile (protected route)
+```
+/api/broker/profile
+```
+Update profile (name, phone)
+```
+/api/broker/listings
+```
+CRUD operations on listings (broker-only)
+
+### 🔐 Authentication & Sessions
+1. Uses express-session with cookie-based authentication
+
+2. Role-based access control: admin, broker, user
+
+### 📦 Future Enhancements
+1. Email notifications for inquiries and approvals
+
+2. AI-enhanced search and personalized recommendations
+
+3. Subscription model for premium brokers
+
+4. Mobile app version (React Native)
+
+## 👨‍👩‍👧‍👦 Contributors
+
+| Name    | Contribution (%) | Area of Focus                                     |
+|---------|------------------|---------------------------------------------------|
+| Suhas   | 40%              | Full-stack architecture, broker system, Groq API  |
+| Varun   | 20%              | Admin dashboard, broker approval system           |
+| Prerana | 15%              | Frontend styling, registration flows              |
+| Manasa  | 15%              | Inquiry system, backend testing                   |
+| Rajat   | 10%              | Documentation, helper utilities, deployment setup |
+
+
+
+📸 Screenshots
+
+
+
+
+
+
+
 
