@@ -41,7 +41,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/homefit.git
+git clone https://github.com/suhasreddy-northeastern/homefit.git
 ```
 ```
 cd homefit
