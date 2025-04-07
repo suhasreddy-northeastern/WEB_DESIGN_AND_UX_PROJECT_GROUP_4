@@ -21,8 +21,10 @@ import {
   DialogActions,
   Divider,
   ListItemIcon,
+  Alert,
+  Snackbar,
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -31,7 +33,9 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import AddIcon from "@mui/icons-material/Add";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import BrokerEditListing from "./BrokerEditListing";
+import { useSelector } from "react-redux";
 import axios from "axios";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -46,16 +50,36 @@ const BrokerListings = () => {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [error, setError] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  
   const theme = useTheme();
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.user.user);
   const primaryColor = theme.palette.primary.main;
   const isDarkMode = theme.palette.mode === "dark";
+  
+  const isApproved = user?.isApproved;
 
   useEffect(() => {
     const fetchListings = async () => {
+      if (!user || user.type !== 'broker') {
+        navigate('/login');
+        return;
+      }
+
+      // If broker is not approved, don't make API calls
+      if (!isApproved) {
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
         const response = await axios.get(
-          "http://localhost:4000/api/broker/listings",
+          "/api/broker/listings",
           {
             withCredentials: true,
           }
@@ -63,59 +87,28 @@ const BrokerListings = () => {
         setListings(response.data);
       } catch (error) {
         console.error("Error fetching listings:", error);
-        // Mock data for demonstration
-        setListings([
-          {
-            _id: "1",
-            imageUrls: ["/images/apt1.jpg"],
-            bedrooms: "2",
-            price: 1500,
-            neighborhood: "Downtown",
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            type: "Rent",
-            views: 45,
-            inquiries: 5,
-            style: "Modern",
-          },
-          {
-            _id: "2",
-            imageUrls: ["/images/apt2.jpg"],
-            bedrooms: "1",
-            price: 1200,
-            neighborhood: "Midtown",
-            isActive: true,
-            createdAt: new Date(
-              Date.now() - 7 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            type: "Rent",
-            views: 30,
-            inquiries: 3,
-            style: "Loft",
-          },
-          {
-            _id: "3",
-            imageUrls: ["/images/apt3.jpg"],
-            bedrooms: "3",
-            price: 2200,
-            neighborhood: "Uptown",
-            isActive: false,
-            createdAt: new Date(
-              Date.now() - 30 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            type: "Buy",
-            views: 20,
-            inquiries: 0,
-            style: "Traditional",
-          },
-        ]);
+        
+        if (error.response && error.response.status === 403) {
+          showSnackbar("You need admin approval before accessing listings", "error");
+        } else {
+          showSnackbar("Failed to load listings. Please try again later.", "error");
+        }
+        
+        // Set empty listings array on error
+        setListings([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchListings();
-  }, []);
+  }, [user, navigate, isApproved]);
+
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
 
   const handleMenuOpen = (event, listing) => {
     setAnchorEl(event.currentTarget);
@@ -139,7 +132,7 @@ const BrokerListings = () => {
   const handleDeleteConfirm = async () => {
     try {
       await axios.delete(
-        `http://localhost:4000/api/broker/listings/${selectedListing._id}`,
+        `/api/broker/listings/${selectedListing._id}`,
         {
           withCredentials: true,
         }
@@ -147,8 +140,10 @@ const BrokerListings = () => {
       setListings(
         listings.filter((listing) => listing._id !== selectedListing._id)
       );
+      showSnackbar("Listing deleted successfully");
     } catch (error) {
       console.error("Error deleting listing:", error);
+      showSnackbar("Failed to delete listing. Please try again.", "error");
     } finally {
       setDeleteDialogOpen(false);
       setSelectedListing(null);
@@ -162,7 +157,7 @@ const BrokerListings = () => {
         isActive: !selectedListing.isActive,
       };
       await axios.put(
-        `http://localhost:4000/api/broker/listings/${selectedListing._id}/toggle-active`,
+        `/api/broker/listings/${selectedListing._id}/toggle-active`,
         { isActive: updatedListing.isActive },
         { withCredentials: true }
       );
@@ -172,8 +167,11 @@ const BrokerListings = () => {
           listing._id === selectedListing._id ? updatedListing : listing
         )
       );
+      
+      showSnackbar(`Listing ${updatedListing.isActive ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error("Error toggling listing status:", error);
+      showSnackbar("Failed to update listing status. Please try again.", "error");
     } finally {
       handleMenuClose();
     }
@@ -194,8 +192,70 @@ const BrokerListings = () => {
     );
   }
 
+  // If broker is not approved, show pending approval message
+  if (!isApproved) {
+    return (
+      <Box sx={{ p: 3, maxWidth: '800px', mx: 'auto', textAlign: 'center' }}>
+        <Card
+          elevation={2}
+          sx={{
+            p: 4,
+            borderRadius: 2,
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
+            border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+          }}
+        >
+          <ErrorOutlineIcon sx={{ fontSize: 64, color: theme.palette.warning.main, mb: 2 }} />
+          <Typography variant="h4" component="h1" fontWeight="bold" mb={2} color="text.primary">
+            Approval Pending
+          </Typography>
+          <Typography variant="body1" paragraph color="text.secondary">
+            Your broker account is currently pending approval from an administrator.
+            Once approved, you'll have full access to all broker features.
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            This typically takes 1-2 business days. You'll receive an email notification once your account is approved.
+          </Typography>
+          <Box sx={{ mt: 4 }}>
+            <Button
+              component={Link}
+              to="/profile"
+              variant="contained"
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1.2,
+                bgcolor: primaryColor,
+                '&:hover': {
+                  bgcolor: theme.palette.primary.dark,
+                }
+              }}
+            >
+              Check Profile Status
+            </Button>
+          </Box>
+        </Card>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3, maxWidth: "1200px", mx: "auto" }}>
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity={snackbarSeverity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+      
       <Box
         sx={{
           display: "flex",
@@ -212,6 +272,24 @@ const BrokerListings = () => {
         >
           My Listings
         </Typography>
+        
+        <Button
+          component={Link}
+          to="/broker/add-listing"
+          variant="contained"
+          startIcon={<AddIcon />}
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            py: 1.2,
+            bgcolor: primaryColor,
+            "&:hover": {
+              bgcolor: theme.palette.primary.dark,
+            },
+          }}
+        >
+          Add New Listing
+        </Button>
       </Box>
 
       {listings.length === 0 ? (
@@ -251,205 +329,224 @@ const BrokerListings = () => {
         </Card>
       ) : (
         <Grid container spacing={3}>
-          {listings.map((listing) => (
-            <Grid item xs={12} sm={6} md={4} key={listing._id}>
-              <Card
-                elevation={2}
-                sx={{
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  position: "relative",
-                  backgroundColor: isDarkMode
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "#fff",
-                  border: isDarkMode
-                    ? "1px solid rgba(255, 255, 255, 0.1)"
-                    : "none",
-                  transition:
-                    "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-                  "&:hover": {
-                    transform: "translateY(-5px)",
-                    boxShadow: isDarkMode
-                      ? "0 8px 24px rgba(0, 0, 0, 0.3)"
-                      : "0 8px 24px rgba(35, 206, 163, 0.15)",
-                  },
-                }}
-              >
-                {!listing.isActive && (
-                  <Chip
-                    label="Inactive"
-                    color="default"
+          {listings.map((listing) => {
+            // Add a check for any pending approval status
+            const isPendingApproval = listing.approvalStatus === 'pending';
+            
+            return (
+              <Grid item xs={12} sm={6} md={4} key={listing._id}>
+                <Card
+                  elevation={2}
+                  sx={{
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    position: "relative",
+                    backgroundColor: isDarkMode
+                      ? "rgba(255, 255, 255, 0.05)"
+                      : "#fff",
+                    border: isDarkMode
+                      ? "1px solid rgba(255, 255, 255, 0.1)"
+                      : "none",
+                    transition:
+                      "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+                    "&:hover": {
+                      transform: "translateY(-5px)",
+                      boxShadow: isDarkMode
+                        ? "0 8px 24px rgba(0, 0, 0, 0.3)"
+                        : "0 8px 24px rgba(35, 206, 163, 0.15)",
+                    },
+                  }}
+                >
+                  {!listing.isActive && (
+                    <Chip
+                      label="Inactive"
+                      color="default"
+                      sx={{
+                        position: "absolute",
+                        top: 10,
+                        left: 10,
+                        zIndex: 1,
+                        backgroundColor: isDarkMode
+                          ? "rgba(0, 0, 0, 0.6)"
+                          : "rgba(0, 0, 0, 0.6)",
+                        color: "white",
+                      }}
+                    />
+                  )}
+                  
+                  {isPendingApproval && (
+                    <Chip
+                      label="Pending Approval"
+                      color="warning"
+                      sx={{
+                        position: "absolute",
+                        top: !listing.isActive ? 45 : 10,
+                        left: 10,
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                  
+                  <IconButton
+                    aria-label="more"
                     sx={{
                       position: "absolute",
                       top: 10,
-                      left: 10,
+                      right: 10,
                       zIndex: 1,
                       backgroundColor: isDarkMode
-                        ? "rgba(0, 0, 0, 0.6)"
-                        : "rgba(0, 0, 0, 0.6)",
-                      color: "white",
-                    }}
-                  />
-                )}
-                <IconButton
-                  aria-label="more"
-                  sx={{
-                    position: "absolute",
-                    top: 10,
-                    right: 10,
-                    zIndex: 1,
-                    backgroundColor: isDarkMode
-                      ? "rgba(0, 0, 0, 0.5)"
-                      : "rgba(255, 255, 255, 0.8)",
-                    "&:hover": {
-                      backgroundColor: isDarkMode
-                        ? "rgba(0, 0, 0, 0.7)"
-                        : "rgba(255, 255, 255, 0.9)",
-                    },
-                  }}
-                  onClick={(e) => handleMenuOpen(e, listing)}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-                <CardActionArea
-                  component={Link}
-                  to={`/broker/listings/${listing._id}`}
-                >
-                  <CardMedia
-                    component="img"
-                    height="180"
-                    image={listing.imageUrls[0] || "/images/placeholder.jpg"}
-                    alt={`${listing.bedrooms} bedroom in ${listing.neighborhood}`}
-                    sx={{
-                      opacity: listing.isActive ? 1 : 0.7,
-                    }}
-                  />
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Typography
-                        variant="h6"
-                        fontWeight="bold"
-                        component="div"
-                        color="text.primary"
-                      >
-                        ${listing.price.toLocaleString()}
-                      </Typography>
-                      <Chip
-                        label={listing.type}
-                        size="small"
-                        sx={{
-                          backgroundColor:
-                            listing.type === "Rent"
-                              ? isDarkMode
-                                ? "rgba(35, 206, 163, 0.2)"
-                                : "rgba(35, 206, 163, 0.1)"
-                              : isDarkMode
-                              ? "rgba(249, 199, 79, 0.2)"
-                              : "rgba(249, 199, 79, 0.1)",
-                          color:
-                            listing.type === "Rent"
-                              ? primaryColor
-                              : theme.palette.warning.main,
-                          fontWeight: 600,
-                        }}
-                      />
-                    </Box>
-                    <Typography
-                      variant="body1"
-                      color="text.primary"
-                      gutterBottom
-                    >
-                      {listing.bedrooms} BHK {listing.style} in{" "}
-                      {listing.neighborhood}
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        mt: 2,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          color: "text.secondary",
-                        }}
-                      >
-                        <VisibilityOutlinedIcon
-                          sx={{
-                            fontSize: 16,
-                            mr: 0.5,
-                            color: "text.secondary",
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {listing.views}
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          color: "text.secondary",
-                        }}
-                      >
-                        <EmailOutlinedIcon
-                          sx={{
-                            fontSize: 16,
-                            mr: 0.5,
-                            color: "text.secondary",
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {listing.inquiries}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </CardActionArea>
-                <Divider />
-                <CardActions
-                  sx={{
-                    justifyContent: "space-between",
-                    backgroundColor: isDarkMode
-                      ? "rgba(0, 0, 0, 0.2)"
-                      : "rgba(0, 0, 0, 0.03)",
-                    px: 2,
-                  }}
-                >
-                  <Typography variant="caption" color="text.secondary">
-                    {dayjs(listing.createdAt).fromNow()}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => handleEditClick(listing._id)}
-                    startIcon={<EditIcon />}
-                    sx={{
-                      color: primaryColor,
+                        ? "rgba(0, 0, 0, 0.5)"
+                        : "rgba(255, 255, 255, 0.8)",
                       "&:hover": {
                         backgroundColor: isDarkMode
-                          ? "rgba(35, 206, 163, 0.1)"
-                          : "rgba(35, 206, 163, 0.05)",
+                          ? "rgba(0, 0, 0, 0.7)"
+                          : "rgba(255, 255, 255, 0.9)",
                       },
                     }}
+                    onClick={(e) => handleMenuOpen(e, listing)}
                   >
-                    Edit
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
+                    <MoreVertIcon />
+                  </IconButton>
+                  <CardActionArea
+                    component={Link}
+                    to={`/broker/listings/${listing._id}`}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="180"
+                      image={listing.imageUrls?.[0] || "/images/placeholder.jpg"}
+                      alt={`${listing.bedrooms} bedroom in ${listing.neighborhood}`}
+                      sx={{
+                        opacity: listing.isActive && !isPendingApproval ? 1 : 0.7,
+                      }}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          fontWeight="bold"
+                          component="div"
+                          color="text.primary"
+                        >
+                          ${listing.price?.toLocaleString()}
+                        </Typography>
+                        <Chip
+                          label={listing.type || "Rent"}
+                          size="small"
+                          sx={{
+                            backgroundColor:
+                              (listing.type || "Rent") === "Rent"
+                                ? isDarkMode
+                                  ? "rgba(35, 206, 163, 0.2)"
+                                  : "rgba(35, 206, 163, 0.1)"
+                                : isDarkMode
+                                ? "rgba(249, 199, 79, 0.2)"
+                                : "rgba(249, 199, 79, 0.1)",
+                            color:
+                              (listing.type || "Rent") === "Rent"
+                                ? primaryColor
+                                : theme.palette.warning.main,
+                            fontWeight: 600,
+                          }}
+                        />
+                      </Box>
+                      <Typography
+                        variant="body1"
+                        color="text.primary"
+                        gutterBottom
+                      >
+                        {listing.bedrooms} BHK {listing.style || ""} in{" "}
+                        {listing.neighborhood}
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 2,
+                          mt: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            color: "text.secondary",
+                          }}
+                        >
+                          <VisibilityOutlinedIcon
+                            sx={{
+                              fontSize: 16,
+                              mr: 0.5,
+                              color: "text.secondary",
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {listing.views || 0}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            color: "text.secondary",
+                          }}
+                        >
+                          <EmailOutlinedIcon
+                            sx={{
+                              fontSize: 16,
+                              mr: 0.5,
+                              color: "text.secondary",
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {listing.inquiries || 0}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </CardActionArea>
+                  <Divider />
+                  <CardActions
+                    sx={{
+                      justifyContent: "space-between",
+                      backgroundColor: isDarkMode
+                        ? "rgba(0, 0, 0, 0.2)"
+                        : "rgba(0, 0, 0, 0.03)",
+                      px: 2,
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {dayjs(listing.createdAt).fromNow()}
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={() => handleEditClick(listing._id)}
+                      startIcon={<EditIcon />}
+                      sx={{
+                        color: primaryColor,
+                        "&:hover": {
+                          backgroundColor: isDarkMode
+                            ? "rgba(35, 206, 163, 0.1)"
+                            : "rgba(35, 206, 163, 0.05)",
+                        },
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
 
@@ -503,31 +600,36 @@ const BrokerListings = () => {
           </ListItemIcon>
           <Typography variant="body2">Edit Listing</Typography>
         </MenuItem>
-        <MenuItem
-          onClick={handleToggleActive}
-          sx={{
-            py: 1.2,
-            "&:hover": {
-              backgroundColor: isDarkMode
-                ? "rgba(35, 206, 163, 0.1)"
-                : "rgba(35, 206, 163, 0.05)",
-            },
-          }}
-        >
-          <ListItemIcon>
-            {selectedListing?.isActive ? (
-              <VisibilityOffIcon
-                fontSize="small"
-                sx={{ color: theme.palette.warning.main }}
-              />
-            ) : (
-              <VisibilityIcon fontSize="small" sx={{ color: primaryColor }} />
-            )}
-          </ListItemIcon>
-          <Typography variant="body2">
-            {selectedListing?.isActive ? "Deactivate" : "Activate"}
-          </Typography>
-        </MenuItem>
+        
+        {/* Only show toggle for listings that are not pending approval */}
+        {selectedListing && selectedListing.approvalStatus !== 'pending' && (
+          <MenuItem
+            onClick={handleToggleActive}
+            sx={{
+              py: 1.2,
+              "&:hover": {
+                backgroundColor: isDarkMode
+                  ? "rgba(35, 206, 163, 0.1)"
+                  : "rgba(35, 206, 163, 0.05)",
+              },
+            }}
+          >
+            <ListItemIcon>
+              {selectedListing?.isActive ? (
+                <VisibilityOffIcon
+                  fontSize="small"
+                  sx={{ color: theme.palette.warning.main }}
+                />
+              ) : (
+                <VisibilityIcon fontSize="small" sx={{ color: primaryColor }} />
+              )}
+            </ListItemIcon>
+            <Typography variant="body2">
+              {selectedListing?.isActive ? "Deactivate" : "Activate"}
+            </Typography>
+          </MenuItem>
+        )}
+        
         <Divider sx={{ my: 1 }} />
         <MenuItem
           onClick={handleDeleteClick}

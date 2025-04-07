@@ -27,12 +27,20 @@ import PreferenceForm from "./pages/user/PreferenceForm";
 import SavedListings from "./pages/user/SavedListings";
 import ResourcePage from "./pages/ResourcePage";
 
-
 // Broker Dashboard Pages
 import BrokerLayout from "./pages/broker/BrokerLayout";
 import BrokerDashboard from "./pages/broker/BrokerDashboard";
 import BrokerListings from "./pages/broker/BrokerListings";
 import BrokerInquiries from "./pages/broker/BrokerInquiries";
+import BrokerProfile from "./pages/broker/BrokerProfile";
+import BrokerRegistration from "./pages/broker/BrokerRegistration";
+import BrokerSettings from './pages/broker/BrokerSettings';
+
+// Admin Dashboard Pages
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminBrokers from "./pages/admin/AdminBrokers";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 // Route Guards
 import AdminRoute from "./routes/AdminRoute";
@@ -49,9 +57,12 @@ function AppRoutes() {
   const [loading, setLoading] = useState(true);
 
   const hideNavbar = ["/login", "/signup"].includes(location.pathname) ||
-                     location.pathname.startsWith('/broker/');
+                     location.pathname.startsWith('/broker/') ||
+                     location.pathname.startsWith('/admin/');
 
-  const hideFooter = location.pathname.startsWith('/broker/');
+  const hideFooter = ["/login", "/signup"].includes(location.pathname) ||
+                     location.pathname.startsWith('/broker/') ||
+                     location.pathname.startsWith('/admin/');
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -77,8 +88,24 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/broker/register" element={<BrokerRegistration />} />
 
-        {/* Admin-only */}
+        {/* Admin Layout with nested routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="brokers" element={<AdminBrokers />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="listings" element={<div>Admin Listings Page</div>} />
+        </Route>
+
+        {/* Legacy admin route */}
         <Route
           path="/employees"
           element={
@@ -101,6 +128,8 @@ function AppRoutes() {
           <Route path="listings" element={<BrokerListings />} />
           <Route path="inquiries" element={<BrokerInquiries />} />
           <Route path="add-listing" element={<AgentApartmentForm />} />
+          <Route path="profile" element={<BrokerProfile />} />
+          <Route path="settings" element={<BrokerSettings />} />
         </Route>
 
         {/* Backward compatibility - redirects to the new location within broker layout */}

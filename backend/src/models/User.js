@@ -53,6 +53,25 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Apartment",
   }],
+
+  // Profile enhancements
+  bio: { type: String },
+  companyName: { type: String },
+  
+  // Notification settings
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    newInquiryAlerts: { type: Boolean, default: true },
+    marketingUpdates: { type: Boolean, default: false },
+    accountAlerts: { type: Boolean, default: true }
+  },
+
+  // User-specific fields
+  savedApartments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Apartment",
+  }],
+
 });
 
 // Hash password

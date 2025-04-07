@@ -38,11 +38,13 @@ const Navbar = () => {
   
   const isBroker = user?.type === "broker";
   const isUser = user?.type === "user";
+  const isAdmin = user?.type === "admin";
   const isLoggedIn = !!user?.email;
 
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [brokerMenuAnchorEl, setBrokerMenuAnchorEl] = useState(null);
+  const [adminMenuAnchorEl, setAdminMenuAnchorEl] = useState(null);
 
   if (["/login", "/signup"].includes(location.pathname)) return null;
 
@@ -88,6 +90,18 @@ const Navbar = () => {
     },
   ];
 
+  const adminLinks = [
+    { 
+      label: "Admin Portal", 
+      dropdownItems: [
+        { label: "Dashboard", to: "/admin/dashboard" },
+        { label: "Manage Brokers", to: "/admin/brokers" },
+        { label: "Manage Users", to: "/admin/users" },
+        { label: "Review Listings", to: "/admin/listings" }
+      ]
+    },
+  ];
+
   const userLinks = [
     { label: "Find Apartments", to: "/preferences" },
     { label: "Saved Listings", to: "/user/saved" },
@@ -96,6 +110,7 @@ const Navbar = () => {
 
   const allLinks = [
     ...commonLinks,
+    ...(isAdmin ? adminLinks : []),
     ...(isBroker ? brokerLinks : []),
     ...(isUser ? userLinks : []),
   ];
@@ -119,6 +134,19 @@ const Navbar = () => {
   const handleBrokerMenuItemClick = (to) => {
     navigate(to);
     handleBrokerMenuClose();
+  };
+
+  const handleAdminMenuOpen = (event) => {
+    setAdminMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleAdminMenuClose = () => {
+    setAdminMenuAnchorEl(null);
+  };
+
+  const handleAdminMenuItemClick = (to) => {
+    navigate(to);
+    handleAdminMenuClose();
   };
 
   // Use the theme's colors
@@ -182,36 +210,69 @@ const Navbar = () => {
                   <Button
                     sx={navButtonStyle}
                     endIcon={<ExpandMoreIcon />}
-                    onClick={handleBrokerMenuOpen}
+                    onClick={link.label === "Broker Portal" ? handleBrokerMenuOpen : handleAdminMenuOpen}
                   >
                     {link.label}
                   </Button>
-                  <Menu
-                    anchorEl={brokerMenuAnchorEl}
-                    open={Boolean(brokerMenuAnchorEl)}
-                    onClose={handleBrokerMenuClose}
-                    MenuListProps={{ sx: { py: 0 } }}
-                  >
-                    {link.dropdownItems.map((item) => (
-                      <MenuItem 
-                        key={item.label} 
-                        onClick={() => handleBrokerMenuItemClick(item.to)}
-                        sx={{ 
-                          py: 1.5, 
-                          px: 2,
-                          minWidth: 180,
-                          ...(location.pathname === item.to || 
-                              (item.to === '/broker/add-listing' && location.pathname === '/list-apartment') ? {
-                            backgroundColor: 'rgba(35, 206, 163, 0.08)',
-                            color: theme.palette.primary.main,
-                            fontWeight: 600
-                          } : {})
-                        }}
-                      >
-                        {item.label}
-                      </MenuItem>
-                    ))}
-                  </Menu>
+                  
+                  {/* Broker Portal Menu */}
+                  {link.label === "Broker Portal" && (
+                    <Menu
+                      anchorEl={brokerMenuAnchorEl}
+                      open={Boolean(brokerMenuAnchorEl)}
+                      onClose={handleBrokerMenuClose}
+                      MenuListProps={{ sx: { py: 0 } }}
+                    >
+                      {link.dropdownItems.map((item) => (
+                        <MenuItem 
+                          key={item.label} 
+                          onClick={() => handleBrokerMenuItemClick(item.to)}
+                          sx={{ 
+                            py: 1.5, 
+                            px: 2,
+                            minWidth: 180,
+                            ...(location.pathname === item.to || 
+                                (item.to === '/broker/add-listing' && location.pathname === '/list-apartment') ? {
+                              backgroundColor: 'rgba(35, 206, 163, 0.08)',
+                              color: theme.palette.primary.main,
+                              fontWeight: 600
+                            } : {})
+                          }}
+                        >
+                          {item.label}
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  )}
+                  
+                  {/* Admin Portal Menu */}
+                  {link.label === "Admin Portal" && (
+                    <Menu
+                      anchorEl={adminMenuAnchorEl}
+                      open={Boolean(adminMenuAnchorEl)}
+                      onClose={handleAdminMenuClose}
+                      MenuListProps={{ sx: { py: 0 } }}
+                    >
+                      {link.dropdownItems.map((item) => (
+                        <MenuItem 
+                          key={item.label} 
+                          onClick={() => handleAdminMenuItemClick(item.to)}
+                          sx={{ 
+                            py: 1.5, 
+                            px: 2,
+                            minWidth: 180,
+                            ...(location.pathname === item.to ? {
+                              backgroundColor: 'rgba(35, 206, 163, 0.08)',
+                              color: theme.palette.primary.main,
+                              fontWeight: 600
+                            } : {})
+                          }}
+                        >
+                          {item.label}
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  )}
                 </Box>
               ) : (
                 <Button
@@ -239,6 +300,11 @@ const Navbar = () => {
                   sx={{ fontWeight: 500 }}
                 >
                   Logged in as <strong>{user.email}</strong>
+                  {isAdmin && (
+                    <Typography component="span" color="error.main" fontWeight="bold" sx={{ ml: 1 }}>
+                      (Admin)
+                    </Typography>
+                  )}
                 </Typography>
                 <ProfileMenu user={user} />
               </>
@@ -286,6 +352,66 @@ const Navbar = () => {
                     </ListItem>
                   ))}
                   
+                  {/* Admin Portal Links */}
+                  {isAdmin && (
+                    <>
+                      <ListItem sx={{ pt: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Admin Portal
+                        </Typography>
+                      </ListItem>
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={location.pathname === "/admin/dashboard"}
+                          onClick={() => {
+                            navigate("/admin/dashboard");
+                            setDrawerOpen(false);
+                          }}
+                          sx={location.pathname === "/admin/dashboard" ? activeDrawerStyle : {}}
+                        >
+                          <ListItemText primary="Dashboard" />
+                        </ListItemButton>
+                      </ListItem>
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={location.pathname === "/admin/brokers"}
+                          onClick={() => {
+                            navigate("/admin/brokers");
+                            setDrawerOpen(false);
+                          }}
+                          sx={location.pathname === "/admin/brokers" ? activeDrawerStyle : {}}
+                        >
+                          <ListItemText primary="Manage Brokers" />
+                        </ListItemButton>
+                      </ListItem>
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={location.pathname === "/admin/users"}
+                          onClick={() => {
+                            navigate("/admin/users");
+                            setDrawerOpen(false);
+                          }}
+                          sx={location.pathname === "/admin/users" ? activeDrawerStyle : {}}
+                        >
+                          <ListItemText primary="Manage Users" />
+                        </ListItemButton>
+                      </ListItem>
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={location.pathname === "/admin/listings"}
+                          onClick={() => {
+                            navigate("/admin/listings");
+                            setDrawerOpen(false);
+                          }}
+                          sx={location.pathname === "/admin/listings" ? activeDrawerStyle : {}}
+                        >
+                          <ListItemText primary="Review Listings" />
+                        </ListItemButton>
+                      </ListItem>
+                    </>
+                  )}
+                  
+                  {/* Broker Portal Links */}
                   {isBroker && (
                     <>
                       <ListItem sx={{ pt: 1 }}>
@@ -344,6 +470,7 @@ const Navbar = () => {
                     </>
                   )}
                   
+                  {/* Regular User Links */}
                   {isUser && (
                     <>
                       <ListItem disablePadding>
@@ -389,6 +516,11 @@ const Navbar = () => {
                     <>
                       <Typography variant="body2" color="text.secondary" mb={1}>
                         Logged in as <strong>{user.email}</strong>
+                        {isAdmin && (
+                          <Typography component="span" color="error.main" fontWeight="bold" sx={{ ml: 1 }}>
+                            (Admin)
+                          </Typography>
+                        )}
                       </Typography>
                       <Button
                         fullWidth

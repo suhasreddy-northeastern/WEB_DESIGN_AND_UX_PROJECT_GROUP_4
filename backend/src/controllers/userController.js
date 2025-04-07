@@ -12,29 +12,42 @@ const { calculateMatchScore } = require("../utils/matchScoring");
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    console.log("👉 Login attempt:", { email, password });
+
+    const user = await User.findOne({ email });
+    console.log("🔍 User found:", user ? user.email : "No user found");
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Optional: log user type
+    console.log("🧑‍💻 User type:", user.type);
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+    console.log("🔐 Password match:", isMatch);
 
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Save session info
     req.session.user = {
+      _id: user._id,
       email: user.email,
       fullName: user.fullName,
       type: user.type,
     };
 
-    res.status(200).json({
-      message: "Login successful",
-      user: req.session.user,
-    });
+    console.log("✅ Session created:", req.session.user);
+    res.status(200).json({ message: "Login successful", user: req.session.user });
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ Login error:", error);
+    res.status(500).json({ error: "Server error during login" });
   }
-  console.log("Session ID:", req.sessionID);
-  console.log("Session data:", req.session);
 };
+
 
 // Update user
 exports.updateUser = async (req, res) => {

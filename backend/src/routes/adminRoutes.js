@@ -16,6 +16,16 @@ router.get("/pending-brokers", checkAuth("admin"), async (req, res) => {
   }
 });
 
+// GET all brokers
+router.get("/brokers", checkAuth("admin"), async (req, res) => {
+  try {
+    const brokers = await User.find({ type: "broker" });
+    res.json(brokers);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch brokers" });
+  }
+});
+
 // ✅ Approve broker by ID
 router.post("/approve-broker/:id", checkAuth("admin"), async (req, res) => {
   try {
@@ -47,6 +57,16 @@ router.post("/revoke-broker/:id", checkAuth("admin"), async (req, res) => {
     res.json({ message: "Broker approval revoked" });
   } catch (err) {
     res.status(500).json({ message: "Revoking approval failed" });
+  }
+});
+
+
+router.get("/users", checkAuth("admin"), async (req, res) => {
+  try {
+    const users = await User.find({ type: "user" }); // or maybe all users if needed
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch users" });
   }
 });
 

@@ -6,21 +6,30 @@ import {
   Typography,
   Box,
   Paper,
-  Grid
+  Grid,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../../redux/userSlice';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import GoogleLoginButton from "../common/buttons/GoogleLoginButton";
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -36,7 +45,6 @@ const Login = () => {
     }
   };
   
-
   return (
     <Container maxWidth="md" sx={{ mt: 10 }}>
       <Paper elevation={4} sx={{ borderRadius: 3, overflow: 'hidden' }}>
@@ -84,13 +92,26 @@ const Login = () => {
                   />
                   <TextField
                     label="Password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     variant="outlined"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     fullWidth
                     sx={{ borderRadius: 2 }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleTogglePasswordVisibility}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                   {error && (
                     <Typography color="error" variant="body2">

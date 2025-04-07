@@ -2,6 +2,62 @@
 const Apartment = require('../models/Apartment');
 const Inquiry = require('../models/Inquiry');
 const User = require('../models/User');
+const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
+
+
+// Register a broker (public)
+exports.registerBroker = async (req, res) => {
+  try {
+    const { fullName, email, password, phone, licenseNumber } = req.body;
+    
+    // Debug logging
+    console.log("File received:", req.file);
+    console.log("Form data received:", req.body);
+    
+    // Check if file exists
+    if (!req.file) {
+      return res.status(400).json({ error: "License document is required" });
+    }
+    
+    const licenseDocument = req.file.filename;
+
+    // Check for existing user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email is already registered" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create full path for document URL
+    const licenseDocumentUrl = `http://localhost:4000/uploads/${licenseDocument}`;
+    
+    console.log("License document URL:", licenseDocumentUrl);
+
+    // Save user with full license document path
+    const newBroker = new User({
+      fullName,
+      email,
+      password: hashedPassword, // Use the hashed password
+      phone,
+      licenseNumber,
+      licenseDocumentUrl,
+      type: "broker",
+      isApproved: false,
+    });
+
+    await newBroker.save();
+    console.log("Broker saved successfully with document:", licenseDocumentUrl);
+
+    res.status(201).json({ message: "Registration successful. Pending admin approval." });
+  } catch (error) {
+    console.error("Broker registration error:", error);
+    res.status(500).json({ error: "Registration failed. Please try again." });
+  }
+};
 
 // Get broker dashboard stats
 exports.getBrokerStats = async (req, res) => {
@@ -227,20 +283,176 @@ exports.getListingPerformance = async (req, res) => {
 exports.updateBrokerProfile = async (req, res) => {
   try {
     const updates = req.body;
-
+    const userId = req.user._id;
+    
     // Prevent unauthorized changes
-    const restrictedFields = ["type", "email", "isApproved", "_id", "password"];
+    const restrictedFields = ["type", "email", "isApproved", "_id", "password", "licenseNumber", "licenseDocumentUrl"];
     restrictedFields.forEach((field) => delete updates[field]);
-
+    
+    const updateObj = { ...updates };
+    
+    // Handle profile image if present
+    if (req.file) {
+      // Save file path with the correct base URL
+      updateObj.imagePath = `http://localhost:4000/uploads/${req.file.filename}`;
+      
+      // Clean up old profile image if it exists
+      const user = await User.findById(userId);
+      if (user && user.imagePath && !user.imagePath.includes('http://localhost:4000')) {
+        const oldImagePath = path.join(__dirname, '..', user.imagePath);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+    }
+    
     const updatedBroker = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: updates },
+      userId,
+      { $set: updateObj },
       { new: true, runValidators: true }
-    );
-
-    res.json({ message: "Profile updated", broker: updatedBroker });
+    ).select('-password');
+    
+    res.json({ message: "Profile updated successfully", broker: updatedBroker });
   } catch (error) {
     console.error("Profile update error:", error);
     res.status(500).json({ message: "Profile update failed" });
+  }
+};
+
+
+// Change broker password
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
+    
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+    
+    // Update with new password
+    user.password = newPassword;
+    await user.save();
+    
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ message: 'Failed to update password' });
+  }
+};
+
+// Update broker profile with image upload support
+exports.updateBrokerProfile = async (req, res) => {
+  try {
+    const updates = req.body;
+    const userId = req.user._id;
+    
+    // Prevent unauthorized changes
+    const restrictedFields = ["type", "email", "isApproved", "_id", "password", "licenseNumber", "licenseDocumentUrl"];
+    restrictedFields.forEach((field) => delete updates[field]);
+    
+    const updateObj = { ...updates };
+    
+    // Handle profile image if present
+    if (req.file) {
+      // Save file path
+      updateObj.imagePath = `/uploads/${req.file.filename}`;
+      
+      // Clean up old profile image if it exists
+      const user = await User.findById(userId);
+      if (user && user.imagePath && user.imagePath !== updateObj.imagePath) {
+        const oldImagePath = path.join(__dirname, '..', user.imagePath);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+    }
+    
+    const updatedBroker = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateObj },
+      { new: true, runValidators: true }
+    ).select('-password');
+    
+    res.json({ message: "Profile updated successfully", broker: updatedBroker });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ message: "Profile update failed" });
+  }
+};
+
+// Save notification preferences
+exports.updateNotificationSettings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const settings = req.body;
+    
+    // Validate settings object
+    const validSettings = [
+      'emailNotifications',
+      'newInquiryAlerts',
+      'marketingUpdates',
+      'accountAlerts'
+    ];
+    
+    // Filter out any settings that are not in our valid list
+    const filteredSettings = {};
+    Object.keys(settings).forEach(key => {
+      if (validSettings.includes(key)) {
+        filteredSettings[key] = settings[key];
+      }
+    });
+    
+    // In a real application, you might have a separate NotificationSettings model
+    // For this example, we'll store it in the user document
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { notificationSettings: filteredSettings } },
+      { new: true }
+    );
+    
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.status(200).json({ message: 'Notification settings updated successfully' });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ message: 'Failed to update notification settings' });
+  }
+};
+
+// Get broker notification settings
+exports.getNotificationSettings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // If no settings exist yet, return defaults
+    const defaultSettings = {
+      emailNotifications: true,
+      newInquiryAlerts: true,
+      marketingUpdates: false,
+      accountAlerts: true
+    };
+    
+    const notificationSettings = user.notificationSettings || defaultSettings;
+    
+    res.status(200).json({ notificationSettings });
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    res.status(500).json({ message: 'Failed to fetch notification settings' });
   }
 };

@@ -10,7 +10,7 @@ import {
   Typography,
   Divider,
 } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
@@ -18,12 +18,28 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
+import LogoutIcon from '@mui/icons-material/Logout';
+import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../redux/userSlice'; // Adjust import path as needed
 
 const BrokerSidebar = () => {
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const isDarkMode = theme.palette.mode === 'dark';
   const primaryColor = theme.palette.primary.main;
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('http://localhost:4000/api/user/logout', {}, { withCredentials: true });
+      dispatch(logout());
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const menuItems = [
     { name: 'Home', icon: <HomeIcon />, path: '/' },
@@ -31,8 +47,8 @@ const BrokerSidebar = () => {
     { name: 'My Listings', icon: <ListAltIcon />, path: '/broker/listings' },
     { name: 'Inquiries', icon: <QuestionAnswerIcon />, path: '/broker/inquiries' },
     { name: 'Add Listing', icon: <AddCircleOutlineIcon />, path: '/broker/add-listing' },
-    { name: 'Profile', icon: <PersonIcon />, path: '/profile' },
-    { name: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+    { name: 'Profile', icon: <PersonIcon />, path: '/broker/profile' },
+    { name: 'Settings', icon: <SettingsIcon />, path: '/broker/settings' },
   ];
 
   const isActive = (path) => {
@@ -185,6 +201,40 @@ const BrokerSidebar = () => {
               />
             </ListItem>
           ))}
+          
+          {/* Logout Button */}
+          <ListItem
+            button
+            onClick={handleLogout}
+            sx={{
+              mb: 0.5,
+              borderRadius: 1.5,
+              color: theme.palette.error.main,
+              '&:hover': {
+                backgroundColor: isDarkMode
+                  ? 'rgba(239, 83, 80, 0.1)'
+                  : 'rgba(239, 83, 80, 0.05)',
+              },
+              py: 1,
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                color: theme.palette.error.main,
+                minWidth: 36,
+                fontSize: '1.2rem',
+              }}
+            >
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary="Logout"
+              primaryTypographyProps={{
+                fontWeight: 500,
+                fontSize: '0.9rem',
+              }}
+            />
+          </ListItem>
         </List>
       </Box>
 

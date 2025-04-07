@@ -18,6 +18,8 @@ import {
   Avatar,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
+import { useLayoutEffect, useRef } from "react";
+import { gsap } from "gsap";
 import { useSelector } from "react-redux";
 import SearchIcon from "@mui/icons-material/Search";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -33,6 +35,51 @@ const Home = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isBroker = user?.type === "broker";
+  const heroTextRef = useRef(null);
+const heroCardRef = useRef(null);
+const howItWorksRefs = useRef([]);
+const stepsRefs = useRef([]);
+
+useLayoutEffect(() => {
+  const ctx = gsap.context(() => {
+    gsap.from(heroTextRef.current, {
+      opacity: 0,
+      y: 40,
+      duration: 1,
+      ease: "power3.out",
+    });
+
+    gsap.from(heroCardRef.current, {
+      opacity: 0,
+      scale: 0.9,
+      duration: 1.2,
+      delay: 0.3,
+      ease: "back.out(1.7)",
+    });
+
+    gsap.from(howItWorksRefs.current, {
+      opacity: 0,
+      y: 30,
+      duration: 0.8,
+      stagger: 0.2,
+      delay: 0.2,
+      ease: "power2.out",
+    });
+
+    gsap.from(stepsRefs.current, {
+      opacity: 0,
+      y: 30,
+      duration: 0.8,
+      stagger: 0.2,
+      delay: 0.3,
+      ease: "power2.out",
+    });
+  });
+
+  return () => ctx.revert();
+}, []);
+
+
 
   // State for login dialog
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
@@ -110,7 +157,7 @@ const Home = () => {
       >
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} ref={heroTextRef}>
               <Typography
                 variant="h2"
                 fontWeight={700}
@@ -157,11 +204,11 @@ const Home = () => {
                     py: 1.5,
                   }}
                 >
-                  Learn How It Works
+                  Know More
                 </Button>
               </Box>
             </Grid>
-            <Grid item xs={12} md={6} sx={{ position: "relative" }}>
+            <Grid item xs={12} md={6} sx={{ position: "relative" }} ref={heroTextRef}>
               <Box
                 sx={{
                   position: "relative",
@@ -270,7 +317,7 @@ const Home = () => {
         </Typography>
 
         <Grid container spacing={4}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} ref={el => howItWorksRefs.current[0] = el}>
             <Paper
               elevation={1}
               sx={{
@@ -309,7 +356,7 @@ const Home = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} ref={el => howItWorksRefs.current[1] = el}>
             <Paper
               elevation={1}
               sx={{
@@ -348,7 +395,7 @@ const Home = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} ref={el => howItWorksRefs.current[2] = el}>
             <Paper
               elevation={1}
               sx={{
@@ -387,7 +434,7 @@ const Home = () => {
             </Paper>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={3} ref={el => howItWorksRefs.current[3] = el}>
             <Paper
               elevation={1}
               sx={{
@@ -454,7 +501,7 @@ const Home = () => {
           </Typography>
 
           <Grid container spacing={4} sx={{ mt: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3} ref={el => stepsRefs.current[0] = el}>
               <Box
                 sx={{
                   display: "flex",
@@ -485,7 +532,7 @@ const Home = () => {
               </Box>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3} ref={el => stepsRefs.current[1] = el}>
               <Box
                 sx={{
                   display: "flex",
@@ -516,7 +563,7 @@ const Home = () => {
               </Box>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3} ref={el => stepsRefs.current[2] = el} >
               <Box
                 sx={{
                   display: "flex",
@@ -547,7 +594,7 @@ const Home = () => {
               </Box>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3} ref={el => stepsRefs.current[3] = el}>
               <Box
                 sx={{
                   display: "flex",
