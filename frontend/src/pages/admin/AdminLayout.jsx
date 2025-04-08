@@ -18,7 +18,9 @@ import {
   Paper,
 } from '@mui/material';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../../redux/userSlice'; // Make sure this path is correct
+import axios from 'axios';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
@@ -37,6 +39,7 @@ const AdminLayout = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const user = useSelector((state) => state.user.user);
   const isDarkMode = theme.palette.mode === 'dark';
   const primaryColor = theme.palette.primary.main;
@@ -50,6 +53,20 @@ const AdminLayout = () => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  // Proper logout function matching what works in ProfileMenu
+  const handleLogout = async () => {
+    try {
+      await axios.post("http://localhost:4000/api/user/logout", {}, { withCredentials: true });
+      dispatch(logout());
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if the request fails, try to logout locally
+      dispatch(logout());
+      navigate("/login");
+    }
   };
 
   const menuItems = [
@@ -204,14 +221,11 @@ const AdminLayout = () => {
           ))}
           <ListItem
             button
-            onClick={() => {
-              // Handle logout logic here
-              navigate('/login');
-            }}
+            onClick={handleLogout}
             sx={{
               mb: 0.5,
               borderRadius: 1.5,
-              color: theme.palette.text.primary,
+              color: theme.palette.error.main,
               '&:hover': {
                 backgroundColor: isDarkMode
                   ? 'rgba(231, 76, 60, 0.1)'

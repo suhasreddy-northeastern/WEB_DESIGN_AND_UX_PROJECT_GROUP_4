@@ -4,7 +4,6 @@ import {
   Typography,
   Grid,
   IconButton,
-  Button,
   Divider,
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -21,54 +20,71 @@ const SavedListings = () => {
   const navigate = useNavigate();
   const primaryColor = "#00b386";
 
+  const fetchSavedListings = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get("http://localhost:4000/api/user/saved", {
+        withCredentials: true,
+      });
+
+      const apartments = res.data || [];
+
+      const enriched = await Promise.all(
+        apartments.map(async (apt) => {
+          try {
+            const response = await axios.post(
+              "http://localhost:4000/api/groq/explanation",
+              { apartment: apt }, // optionally send latest preferences too
+              { withCredentials: true }
+            );
+            return {
+              ...apt,
+              explanation: response.data.explanation,
+              matchScore: response.data.matchScore || 0,
+              currentStep: 0, // Initialize currentStep for gallery
+            };
+          } catch {
+            return { 
+              ...apt, 
+              explanation: "Explanation unavailable", 
+              matchScore: 0,
+              currentStep: 0, 
+            };
+          }
+        })
+      );
+
+      setSaved(enriched);
+    } catch (err) {
+      console.error("Failed to fetch saved listings", err);
+      setSaved([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchSavedListings = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get("http://localhost:4000/api/user/saved", {
-          withCredentials: true,
-        });
-  
-        const apartments = res.data || [];
-  
-        const enriched = await Promise.all(
-          apartments.map(async (apt) => {
-            try {
-              const response = await axios.post(
-                "http://localhost:4000/api/groq/explanation",
-                { apartment: apt }, // optionally send latest preferences too
-                { withCredentials: true }
-              );
-              return {
-                ...apt,
-                explanation: response.data.explanation,
-                matchScore: response.data.matchScore || 0,
-              };
-            } catch {
-              return { ...apt, explanation: "Explanation unavailable", matchScore: 0 };
-            }
-          })
-        );
-  
-        setSaved(enriched);
-      } catch (err) {
-        console.error("Failed to fetch saved listings", err);
-        setSaved([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
     fetchSavedListings();
   }, []);
-  
+
+  const handleSaveToggle = async (aptId, isSaved) => {
+    if (!isSaved) {
+      // If apartment was unsaved, remove it from the list
+      setSaved(prev => prev.filter(apt => apt._id !== aptId));
+    }
+  };
 
   const handleStepChange = (aptId, dir) => {
     setSaved((prev) =>
       prev.map((item) => {
         if (item._id !== aptId) return item;
         const current = item.currentStep || 0;
-        const max = (item.imageUrls || []).length;
+        const imageUrls = item.imageUrls || [];
+        const max = imageUrls.length;
+        
+        // Handle case where there are no images or only one image
+        if (max <= 1) return item;
+        
         const next =
           dir === "next"
             ? Math.min(current + 1, max - 1)
@@ -130,6 +146,8 @@ const SavedListings = () => {
                   createdAt={createdAt}
                   onStepChange={(dir) => handleStepChange(apt._id, dir)}
                   explanation={apt.explanation}
+                  isSaved={true}
+                  onSaveToggle={handleSaveToggle}
                 />
               </Grid>
             );

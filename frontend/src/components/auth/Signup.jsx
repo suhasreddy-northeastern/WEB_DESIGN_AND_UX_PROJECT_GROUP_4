@@ -17,6 +17,7 @@ import GoogleLoginButton from "../common/buttons/GoogleLoginButton";
 import SuccessModal from "../common/modal/SuccessModal";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import AnimatedBackground from '../common/theme/AnimatedBackground';
 
 const Signup = () => {
   const [form, setForm] = useState({
@@ -70,6 +71,9 @@ const Signup = () => {
   };
   
   return (
+    <>
+    {/* Animated Background */}
+    <AnimatedBackground />
     <Container maxWidth="md" sx={{ mt: 10 }}>
       <SuccessModal
         open={modalOpen}
@@ -198,6 +202,7 @@ const Signup = () => {
         </Grid>
       </Paper>
     </Container>
+    </>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -12,11 +12,20 @@ import {
   Stack,
   Chip,
   useTheme,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import axios from "axios";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import InfoIcon from "@mui/icons-material/Info";
+import LightbulbIcon from "@mui/icons-material/Lightbulb";
+import DiamondIcon from "@mui/icons-material/Diamond";
+import WarningIcon from "@mui/icons-material/Warning";
 import ViewApartmentModal from "../modal/ViewApartmentModal";
 
 const MatchCard = ({
@@ -28,12 +37,143 @@ const MatchCard = ({
   onStepChange,
   matchColor,
   explanation,
-  isSavedView = false,
-  onRemove,
+  isSaved = false,
+  onSaveToggle,
 }) => {
   const theme = useTheme();
   const primaryColor = "#00b386";
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedStatus, setSavedStatus] = useState(isSaved);
+
+  // Simple fallback for high scores when API fails
+  const generateHighScoreFallback = () => {
+    return [
+      { type: "check", text: "Within your budget range" },
+      { type: "check", text: `Has your required bedrooms (${apt.bedrooms})` },
+      { type: "check", text: `In your preferred neighborhood (${apt.neighborhood})` },
+      Array.isArray(apt.amenities) && apt.amenities.length > 0 ? 
+        { type: "check", text: "Has desired amenities" } : null,
+      apt.furnishedStatus ? 
+        { type: "check", text: "Matches your furnishing preferences" } : null
+    ].filter(Boolean); // Remove null items
+  };
+
+  // Simple fallback for low scores when API fails
+  const generateLowScoreFallback = () => {
+    const items = [];
+    
+    // Add explanation for why score is low
+    items.push({ type: "info", text: `This apartment has a ${matchScore}% match with your preferences` });
+    
+    // Add common mismatches based on apartment data
+    if (apt.bedrooms < 3) {
+      items.push({ type: "cancel", text: `Only has ${apt.bedrooms} bedroom${apt.bedrooms !== 1 ? 's' : ''}` });
+    }
+    
+    if (apt.price < 1500) {
+      items.push({ 
+        type: "cancel", 
+        text: `Lower price point ($${apt.price.toLocaleString()}) may mean fewer amenities` 
+      });
+    } else if (apt.price > 4000) {
+      items.push({ 
+        type: "cancel", 
+        text: `Higher price point ($${apt.price.toLocaleString()}) exceeds typical budget` 
+      });
+    }
+    
+    // Add recommendations
+    items.push({ 
+      type: "lightbulb", 
+      text: "Consider your priorities - location, price, and amenities" 
+    });
+    
+    items.push({ 
+      type: "lightbulb", 
+      text: "View the apartment to see if it meets your needs despite the low match score" 
+    });
+    
+    return items;
+  };
+
+  // Process the explanation text from API or generate fallback
+  const getProcessedExplanation = () => {
+    // ONLY use fallback if explanation is empty or error message
+    if (!explanation || explanation === "Could not generate explanation.") {
+      return matchScore >= 80 ? generateHighScoreFallback() : generateLowScoreFallback();
+    }
+    
+    // Otherwise, process the explanation from the API
+    const lines = explanation.split("\n").filter(Boolean);
+    return lines.map(line => {
+      if (line.startsWith("✅")) {
+        return { type: "check", text: line.substring(2).trim() };
+      } else if (line.startsWith("❌")) {
+        return { type: "cancel", text: line.substring(2).trim() };
+      } else if (line.startsWith("💎")) {
+        return { type: "diamond", text: line.substring(2).trim() };
+      } else if (line.startsWith("🟡")) {
+        return { type: "warning", text: line.substring(2).trim() };
+      } else if (line.startsWith("💡")) {
+        return { type: "lightbulb", text: line.substring(2).trim() };
+      } else {
+        return { type: "info", text: line };
+      }
+    });
+  };
+
+  // Update savedStatus when isSaved prop changes
+  useEffect(() => {
+    setSavedStatus(isSaved);
+  }, [isSaved]);
+
+  const handleSaveToggle = async () => {
+    if (saving) return;
+    
+    setSaving(true);
+    try {
+      await axios.post(
+        "http://localhost:4000/api/user/save",
+        { apartmentId: apt._id },
+        { withCredentials: true }
+      );
+      
+      // Update local state
+      const newSavedStatus = !savedStatus;
+      setSavedStatus(newSavedStatus);
+      
+      // Notify parent component if callback provided
+      if (onSaveToggle) {
+        onSaveToggle(apt._id, newSavedStatus);
+      }
+    } catch (err) {
+      console.error("Save toggle error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Get icon component based on type
+  const getIconForType = (type) => {
+    switch (type) {
+      case "check":
+        return <CheckCircleIcon sx={{ color: "#10B981", fontSize: 18, mr: 1 }} />;
+      case "cancel":
+        return <CancelIcon sx={{ color: theme.palette.mode === 'light' ? "#EF4444" : "#f87171", fontSize: 18, mr: 1 }} />;
+      case "diamond":
+        return <DiamondIcon sx={{ color: theme.palette.mode === 'light' ? "#3B82F6" : "#60a5fa", fontSize: 18, mr: 1 }} />;
+      case "warning":
+        return <WarningIcon sx={{ color: theme.palette.mode === 'light' ? "#F59E0B" : "#fbbf24", fontSize: 18, mr: 1 }} />;
+      case "lightbulb":
+        return <LightbulbIcon sx={{ color: theme.palette.mode === 'light' ? "#6366F1" : "#818cf8", fontSize: 18, mr: 1 }} />;
+      case "info":
+      default:
+        return <InfoIcon sx={{ color: theme.palette.mode === 'light' ? "#6B7280" : "#9CA3AF", fontSize: 18, mr: 1 }} />;
+    }
+  };
+
+  const processedExplanation = getProcessedExplanation();
 
   return (
     <>
@@ -109,6 +249,37 @@ const MatchCard = ({
           >
             MATCH
           </Typography>
+        </Box>
+
+        {/* Save/Favorite Button */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            zIndex: 10,
+          }}
+        >
+          <Tooltip title={savedStatus ? "Unsave" : "Save"}>
+            <IconButton
+              onClick={handleSaveToggle}
+              disabled={saving}
+              sx={{
+                backgroundColor: theme.palette.mode === 'light' ? "white" : "#1e1e1e",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                "&:hover": {
+                  backgroundColor: theme.palette.mode === 'light' ? "#f9fafb" : "#333",
+                },
+                color: savedStatus ? "#FF4081" : (theme.palette.mode === 'light' ? "#9CA3AF" : "#9CA3AF"),
+              }}
+            >
+              {savedStatus ? (
+                <FavoriteIcon sx={{ fontSize: 22 }} />
+              ) : (
+                <FavoriteBorderIcon sx={{ fontSize: 22 }} />
+              )}
+            </IconButton>
+          </Tooltip>
         </Box>
 
         <Box
@@ -262,10 +433,21 @@ const MatchCard = ({
                 color: theme.palette.mode === 'light' ? "#111927" : "#e0e0e0" 
               }}
             >
-              <CheckCircleIcon
-                sx={{ color: matchColor, fontSize: 18, mr: 1 }}
-              />
-              Why this is a {matchScore}% match:
+              {matchScore >= 80 ? (
+                <>
+                  <CheckCircleIcon
+                    sx={{ color: matchColor, fontSize: 18, mr: 1 }}
+                  />
+                  Why this is a good match:
+                </>
+              ) : (
+                <>
+                  <InfoIcon
+                    sx={{ color: matchColor, fontSize: 18, mr: 1 }}
+                  />
+                  Why this may not be ideal for you:
+                </>
+              )}
             </Typography>
 
             <Box
@@ -276,63 +458,43 @@ const MatchCard = ({
                 borderRadius: 2,
                 backgroundColor: theme.palette.mode === 'light' ? "#F9FAFB" : "#2a2a2a",
                 borderLeft: `3px solid ${matchColor}`,
-                fontFamily: "monospace",
                 fontSize: 14,
                 color: theme.palette.mode === 'light' ? "#374151" : "#d0d0d0",
-                whiteSpace: "pre-line",
               }}
             >
-              {explanation
-                ?.split("\n")
-                .filter(Boolean)
-                .map((line, i) => {
-                  let color;
-                  if (line.startsWith("✅")) color = "#10B981";
-                  else if (line.startsWith("❌")) color = theme.palette.mode === 'light' ? "#EF4444" : "#f87171";
-                  else if (line.startsWith("💎")) color = theme.palette.mode === 'light' ? "#3B82F6" : "#60a5fa";
-                  else if (line.startsWith("🟡")) color = theme.palette.mode === 'light' ? "#F59E0B" : "#fbbf24";
-                  else color = theme.palette.mode === 'light' ? "#374151" : "#d0d0d0";
-                  
-                  return (
-                    <Box key={i} sx={{ color, mb: 0.5 }}>
-                      {line}
-                    </Box>
-                  );
-                })}
+              {processedExplanation.length > 0 ? (
+                processedExplanation.map((item, index) => (
+                  <Box 
+                    key={index} 
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      mb: 1,
+                      pl: 0.5
+                    }}
+                  >
+                    {getIconForType(item.type)}
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        pt: '1px',
+                        fontWeight: item.type === "lightbulb" ? 400 : 500,
+                        fontStyle: item.type === "lightbulb" ? "italic" : "normal",
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                  </Box>
+                ))
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <InfoIcon sx={{ color: theme.palette.mode === 'light' ? "#6B7280" : "#9CA3AF", fontSize: 18, mr: 1 }} />
+                  <Typography variant="body2">No explanation available</Typography>
+                </Box>
+              )}
             </Box>
 
-            <Box display="flex" justifyContent="flex-end" mt={1} gap={2}>
-              <Button
-                variant="outlined"
-                sx={{
-                  borderRadius: 1.5,
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderColor: theme.palette.mode === 'light' ? "#E5E7EB" : "#444",
-                  color: theme.palette.mode === 'light' ? "#4B5563" : "#b0b0b0",
-                  px: 3,
-                  "&:hover": {
-                    borderColor: theme.palette.mode === 'light' ? "#D1D5DB" : "#555",
-                    backgroundColor: theme.palette.mode === 'light' ? "#F9FAFB" : "#333",
-                  },
-                }}
-                onClick={async () => {
-                  try {
-                    await axios.post(
-                      "http://localhost:4000/api/user/save",
-                      { apartmentId: apt._id },
-                      { withCredentials: true }
-                    );
-                    alert("Toggled save status! 🎉"); // or toast
-                  } catch (err) {
-                    console.error("Save error:", err);
-                    alert("Error saving apartment.");
-                  }
-                }}
-              >
-                Save
-              </Button>
-
+            <Box display="flex" justifyContent="flex-end" mt={1}>
               <Button
                 variant="contained"
                 disableElevation
@@ -360,7 +522,10 @@ const MatchCard = ({
       <ViewApartmentModal
         open={open}
         onClose={() => setOpen(false)}
-        apartment={apt}
+        apartment={{
+          ...apt,
+          matchScore
+        }}
       />
     </>
   );

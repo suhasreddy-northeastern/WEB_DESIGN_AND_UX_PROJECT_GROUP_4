@@ -128,7 +128,10 @@ const BrokerRegistration = () => {
     return Object.keys(stepErrors).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = (e) => {
+    // Prevent default form submission behavior
+    e.preventDefault();
+    
     let isValid = false;
 
     switch (activeStep) {
@@ -147,7 +150,9 @@ const BrokerRegistration = () => {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = (e) => {
+    // Prevent default form submission behavior
+    e.preventDefault();
     setActiveStep((prevStep) => prevStep - 1);
   };
 
@@ -603,7 +608,7 @@ const BrokerRegistration = () => {
 
           <Divider sx={{ mb: 3 }} />
 
-          <Box component="form" onSubmit={handleSubmit}>
+          <Box component="form" onSubmit={handleSubmit} noValidate>
             {renderStepContent()}
 
             <Box
@@ -618,6 +623,7 @@ const BrokerRegistration = () => {
                 disabled={activeStep === 0}
                 onClick={handleBack}
                 sx={{ color: "text.secondary" }}
+                type="button"
               >
                 Back
               </Button>
@@ -645,6 +651,7 @@ const BrokerRegistration = () => {
                   </Button>
                 ) : (
                   <Button
+                    type="button"
                     variant="contained"
                     onClick={handleNext}
                     sx={{
