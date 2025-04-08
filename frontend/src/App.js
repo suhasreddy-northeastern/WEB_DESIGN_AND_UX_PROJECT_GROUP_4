@@ -32,6 +32,8 @@ import UserRoute from "./routes/UserRoute";
 
 // Auth Session
 import { checkSession } from "./redux/sessionActions";
+import PropertyDetailsPage from "./pages/PropertyDetailsPage";
+import LandingPage from "./pages/LandingPage";
 
 function AppRoutes() {
   const location = useLocation();
@@ -108,6 +110,9 @@ function AppRoutes() {
         {/* Common */}
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+
+        <Route path="/landingPage" element={<LandingPage />} />
+        <Route path="/propertyDetails" element={<PropertyDetailsPage />} />
       </Routes>
     </>
   );
