@@ -1,3 +1,4 @@
+//routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
@@ -52,6 +53,9 @@ router.put('/edit', isAuthenticated, validateUserUpdate, userController.updateUs
 router.delete('/delete', isAuthenticated, userController.deleteUser);
 router.get('/getAll', isAuthenticated, userController.getAllUsers);
 router.post('/uploadImage', isAuthenticated, upload.single('image'), userController.uploadImage);
+router.post('/save', isAuthenticated, isUser, userController.toggleSaveApartment);
+router.get('/saved', isAuthenticated, isUser, userController.getSavedApartments);
+
 
 // ✅ User Preferences and Matching
 router.post('/preferences', isAuthenticated, isUser, submitPreferences);

@@ -12,29 +12,42 @@ const { calculateMatchScore } = require("../utils/matchScoring");
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    console.log("👉 Login attempt:", { email, password });
+
+    const user = await User.findOne({ email });
+    console.log("🔍 User found:", user ? user.email : "No user found");
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Optional: log user type
+    console.log("🧑‍💻 User type:", user.type);
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+    console.log("🔐 Password match:", isMatch);
 
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Save session info
     req.session.user = {
+      _id: user._id,
       email: user.email,
       fullName: user.fullName,
       type: user.type,
     };
 
-    res.status(200).json({
-      message: "Login successful",
-      user: req.session.user,
-    });
+    console.log("✅ Session created:", req.session.user);
+    res.status(200).json({ message: "Login successful", user: req.session.user });
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ Login error:", error);
+    res.status(500).json({ error: "Server error during login" });
   }
-  console.log("Session ID:", req.sessionID);
-  console.log("Session data:", req.session);
 };
+
 
 // Update user
 exports.updateUser = async (req, res) => {
@@ -290,4 +303,59 @@ exports.getLatestPreference = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+//  Save or Unsave apartment
+exports.toggleSaveApartment = async (req, res) => {
+  const { apartmentId } = req.body;
+  const email = req.session.user?.email;
+  if (!email) return res.status(401).json({ error: "Not authenticated" });
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Ensure it's an array
+    if (!Array.isArray(user.savedApartments)) {
+      user.savedApartments = [];
+    }
+
+    // Use `toString()` comparison instead of `includes()`
+    const isSaved = user.savedApartments.some(
+      id => id?.toString() === apartmentId
+    );
+
+    if (isSaved) {
+      user.savedApartments = user.savedApartments.filter(
+        id => id?.toString() !== apartmentId
+      );
+      await user.save();
+      return res.status(200).json({ message: "Apartment removed from saved." });
+    } else {
+      user.savedApartments.push(apartmentId);
+      await user.save();
+      return res.status(200).json({ message: "Apartment saved successfully." });
+    }
+  } catch (err) {
+    console.error("Toggle Save Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+//Fetch all saved apartments
+exports.getSavedApartments = async (req, res) => {
+  const email = req.session.user?.email;
+  if (!email) return res.status(401).json({ error: "Not authenticated" });
+
+  try {
+    const user = await User.findOne({ email }).populate("savedApartments");
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json(user.savedApartments);
+  } catch (err) {
+    console.error("Fetch Saved Apartments Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 

@@ -1,3 +1,4 @@
+//models/Apartment.js
 const mongoose = require('mongoose');
 
 const apartmentSchema = new mongoose.Schema({
@@ -18,7 +19,24 @@ const apartmentSchema = new mongoose.Schema({
   leaseCapacity: String,
   roommates: String,
   imageUrls: [String],
-  createdAt: { type: Date, default: Date.now }
+  // Add broker fields
+  brokerEmail: {
+    type: String,
+    required: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved'
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
 module.exports = mongoose.model('Apartment', apartmentSchema);

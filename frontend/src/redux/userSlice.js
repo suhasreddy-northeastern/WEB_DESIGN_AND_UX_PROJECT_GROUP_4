@@ -17,8 +17,12 @@ const userSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
     },
+    updateUser: (state, action) => {
+      // This new reducer lets you update specific user properties
+      state.user = { ...state.user, ...action.payload };
+    },
   },
 });
 
-export const { loginSuccess, logout } = userSlice.actions;
+export const { loginSuccess, logout, updateUser } = userSlice.actions;
 export default userSlice.reducer;

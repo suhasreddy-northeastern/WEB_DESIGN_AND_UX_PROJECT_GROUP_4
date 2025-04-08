@@ -8,11 +8,15 @@ import {
   Paper,
   Grid,
   MenuItem,
+  InputAdornment,
+  IconButton
 } from "@mui/material";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import GoogleLoginButton from "../common/buttons/GoogleLoginButton";
 import SuccessModal from "../common/modal/SuccessModal";
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const Signup = () => {
   const [form, setForm] = useState({
@@ -23,15 +27,35 @@ const Signup = () => {
   });
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    
+    // If the user is registering as a broker, redirect to the broker registration page
+    if (form.type === "broker") {
+      console.log("Redirecting to broker registration...");
+      navigate("/broker/register", { 
+        state: {
+          email: form.email,
+          fullName: form.fullName,
+          password: form.password
+        }
+      });
+      return;
+    }
+    
+    // Continue with regular user registration
     try {
       await axios.post("http://localhost:4000/api/user/create", form);
       setModalOpen(true);
@@ -44,7 +68,7 @@ const Signup = () => {
       setError(err.response?.data?.error || "Signup failed");
     }
   };
-
+  
   return (
     <Container maxWidth="md" sx={{ mt: 10 }}>
       <SuccessModal
@@ -109,12 +133,25 @@ const Signup = () => {
                   <TextField
                     label="Password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     variant="outlined"
                     value={form.password}
                     onChange={handleChange}
                     required
                     fullWidth
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleTogglePasswordVisibility}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                   <TextField
                     select
@@ -123,6 +160,7 @@ const Signup = () => {
                     value={form.type}
                     onChange={handleChange}
                     fullWidth
+                    helperText={form.type === "broker" ? "Broker accounts require additional verification" : ""}
                   >
                     <MenuItem value="user">User</MenuItem>
                     <MenuItem value="broker">Broker</MenuItem>
@@ -150,7 +188,7 @@ const Signup = () => {
                       },
                     }}
                   >
-                    Sign Up
+                    {form.type === "broker" ? "Continue to Broker Verification" : "Sign Up"}
                   </Button>
                   <GoogleLoginButton onClick={() => alert("Google Login Coming Soon!")} />
                 </Box>

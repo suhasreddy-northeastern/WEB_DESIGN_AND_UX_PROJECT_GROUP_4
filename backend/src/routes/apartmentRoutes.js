@@ -2,27 +2,40 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/uploadMiddleware');
 const { generateTitleController } = require('../controllers/apartmentController');
-
-
 const {
   createApartment,
-  getAllApartments
+  getAllApartments,
+  updateApartment
 } = require('../controllers/apartmentController');
 
-// POST: Create new apartment listing
-router.post('/', createApartment);
+const checkApprovedBroker = require('../middleware/checkApprovedBroker');
 
-// generate Title
-router.post('/generate-title', generateTitleController);
+// ------------------------------------------------------------
+// 🏠 APARTMENT LISTINGS
+// ------------------------------------------------------------
 
+// ✅ Create apartment (only approved brokers)
+router.post('/', checkApprovedBroker, createApartment);
 
-// GET: Get all apartments
+// ✅ Update apartment (only approved brokers)
+router.put('/:id', checkApprovedBroker, updateApartment);
+
+// ✅ Get all apartments (public)
 router.get('/', getAllApartments);
 
-// POST: Upload apartment images (max 5 images)
+// ------------------------------------------------------------
+// 🧠 AI TITLE GENERATOR
+// ------------------------------------------------------------
+
+router.post('/generate-title', generateTitleController);
+
+// ------------------------------------------------------------
+// 🖼️ IMAGE UPLOAD (max 5 images)
+// ------------------------------------------------------------
+
 router.post('/upload-images', upload.array('images', 5), (req, res) => {
   try {
-    const fileUrls = req.files.map(file => `/images/${file.filename}`);
+    const fileUrls = req.files.map(file => `/uploads/images/${file.filename}`);
     res.status(200).json({ imageUrls: fileUrls });
   } catch (error) {
     console.error('Image upload error:', error);

@@ -1,4 +1,3 @@
-// models/User.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
@@ -37,25 +36,50 @@ const userSchema = new mongoose.Schema({
     required: [true, "User type is required"],
     enum: ["admin", "broker", "user"],
     lowercase: true,
-  },  
+  },
   imagePath: {
     type: String,
     default: null,
   },
+
+  // Broker-specific fields
+  licenseNumber: { type: String },
+  licenseDocumentUrl: { type: String },
+  phone: { type: String },
+  isApproved: { type: Boolean, default: false },
+
+  // User-specific fields
+  savedApartments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Apartment",
+  }],
+
+  // Profile enhancements
+  bio: { type: String },
+  companyName: { type: String },
+  
+  // Notification settings
+  notificationSettings: {
+    emailNotifications: { type: Boolean, default: true },
+    newInquiryAlerts: { type: Boolean, default: true },
+    marketingUpdates: { type: Boolean, default: false },
+    accountAlerts: { type: Boolean, default: true }
+  },
+
+  // User-specific fields
+  savedApartments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Apartment",
+  }],
+
 });
 
-// Pre-save hook to hash password
+// Hash password
 userSchema.pre("save", async function (next) {
-  // Only hash the password if it's modified (or new)
   if (!this.isModified("password")) return next();
-
   try {
-    // Get salt rounds from environment variable
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
-
-    // Generate a salt
     const salt = await bcrypt.genSalt(saltRounds);
-    // Hash the password along with the new salt
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -63,11 +87,9 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// Method to compare passwords
+// Password check
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-const User = mongoose.model("User", userSchema);
-
-module.exports = User;
+module.exports = mongoose.model("User", userSchema);
