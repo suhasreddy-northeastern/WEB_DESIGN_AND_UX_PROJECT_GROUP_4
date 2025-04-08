@@ -48,6 +48,12 @@ router.post('/create', validateUserCreation, userController.createUser);
 // ✅ Admin-only route
 router.get('/users', isAuthenticated, isAdmin, userController.getAllUsers);
 
+// Profile routes
+router.get('/profile', isAuthenticated, userController.getProfile);
+router.put('/notification-settings', isAuthenticated, userController.updateNotificationSettings);
+router.put('/change-password', isAuthenticated, userController.changePassword);
+router.post('/upload-profile-image', isAuthenticated, upload.single('profileImage'), userController.uploadProfileImage);
+
 // ✅ Protected user routes
 router.put('/edit', isAuthenticated, validateUserUpdate, userController.updateUser);
 router.delete('/delete', isAuthenticated, userController.deleteUser);

@@ -2,11 +2,101 @@ const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
-const { getAsync, setexAsync } = require('../utils/redisClient');
 const Preference = require("../models/Preference");
 const Apartment = require("../models/Apartment");
 const { getMatchExplanation } = require("../services/groqService");
 const { calculateMatchScore } = require("../utils/matchScoring"); 
+const { getAsync, setexAsync, delAsync, redisClient } = require('../utils/redisClient');
+
+/**
+ * Generate a simple fallback explanation when Groq API fails
+ * @param {Object} pref - User preference object
+ * @param {Object} apt - Apartment object
+ * @returns {String} - Simple formatted explanation with check marks
+ */
+const generateFallbackExplanation = (pref, apt) => {
+  const highlights = [];
+  
+  // Check price match
+  if (pref.priceRange) {
+    // For "$3,000+" format
+    if (pref.priceRange.includes('+')) {
+      const minPrice = parseInt(pref.priceRange.replace(/[^\d]/g, ''));
+      if (apt.price >= minPrice) {
+        highlights.push("Within your budget range");
+      }
+    } 
+    // For regular range
+    else {
+      const priceRange = pref.priceRange.split('-').map(p => parseInt(p.replace(/[^\d]/g, '')));
+      if (priceRange.length === 2) {
+        if (apt.price >= priceRange[0] && apt.price <= priceRange[1]) {
+          highlights.push("Within your budget range");
+        }
+      }
+    }
+  }
+  
+  // Check bedrooms match
+  if (pref.bedrooms && apt.bedrooms) {
+    // Extract number from potential formats like "3 Bedrooms"
+    const prefBedroomsMatch = pref.bedrooms.toString().match(/(\d+)/);
+    const prefBedrooms = prefBedroomsMatch ? prefBedroomsMatch[1] : pref.bedrooms;
+    
+    const aptBedroomsMatch = apt.bedrooms.toString().match(/(\d+)/);
+    const aptBedrooms = aptBedroomsMatch ? aptBedroomsMatch[1] : apt.bedrooms;
+    
+    if (prefBedrooms === aptBedrooms) {
+      highlights.push("Has your required bedrooms");
+    }
+  }
+  
+  // Check neighborhood match
+  if (pref.neighborhood && apt.neighborhood && pref.neighborhood === apt.neighborhood) {
+    highlights.push("In your preferred neighborhood");
+  }
+  
+  // Check move-in date
+  if (pref.moveInDate && apt.moveInDate) {
+    const prefDate = new Date(pref.moveInDate);
+    const aptDate = new Date(apt.moveInDate);
+    if (aptDate <= prefDate) {
+      highlights.push("Available within your timeframe");
+    }
+  }
+  
+  // Check amenities matches
+  if (Array.isArray(pref.amenities) && Array.isArray(apt.amenities)) {
+    const matchingAmenities = apt.amenities.filter(item => 
+      pref.amenities.some(prefItem => 
+        prefItem.toLowerCase().includes(item.toLowerCase()) || 
+        item.toLowerCase().includes(prefItem.toLowerCase())
+      )
+    );
+    
+    if (matchingAmenities.length > 0) {
+      if (matchingAmenities.length === pref.amenities.length) {
+        highlights.push("Has all your desired amenities");
+      } else {
+        highlights.push(`Has ${matchingAmenities.length} of your desired amenities`);
+      }
+    }
+  }
+  
+  // Check parking match
+  if (pref.parking && apt.parking) {
+    const prefParking = pref.parking.toLowerCase();
+    const aptParking = apt.parking.toLowerCase();
+    
+    if ((prefParking.includes('yes') || prefParking.includes('need')) && 
+        (aptParking.includes('yes') || aptParking === 'true')) {
+      highlights.push("Includes parking as requested");
+    }
+  }
+  
+  // Format the result with check marks
+  return highlights.map(highlight => `✅ ${highlight}`).join('\n');
+};
 
 // Login
 exports.loginUser = async (req, res) => {
@@ -152,6 +242,124 @@ exports.createUser = async (req, res) => {
   }
 };
 
+// Get user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const email = req.session.user?.email;
+    if (!email) return res.status(401).json({ error: "Not authenticated" });
+
+    const user = await User.findOne({ email }, { password: 0 });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Update notification settings
+exports.updateNotificationSettings = async (req, res) => {
+  try {
+    const email = req.session.user?.email;
+    if (!email) return res.status(401).json({ error: "Not authenticated" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Update notification settings
+    user.notificationSettings = {
+      ...user.notificationSettings,
+      ...req.body
+    };
+
+    await user.save();
+    res.status(200).json({ 
+      message: "Notification settings updated successfully",
+      notificationSettings: user.notificationSettings
+    });
+  } catch (error) {
+    console.error("Error updating notification settings:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Change user password
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const email = req.session.user?.email;
+    
+    if (!email) return res.status(401).json({ error: "Not authenticated" });
+    
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+    
+    // Update with new password
+    user.password = newPassword;
+    await user.save();
+    
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Upload profile image
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    const email = req.session.user?.email;
+    if (!email) return res.status(401).json({ error: "Not authenticated" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Handle the uploaded file
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    
+    // If user already has an image, delete the old one
+    if (user.imagePath) {
+      try {
+        const oldImagePath = path.join(__dirname, "..", user.imagePath);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      } catch (err) {
+        console.error("Error deleting old image:", err);
+        // Continue with upload even if delete fails
+      }
+    }
+
+    const filePath = `/images/${req.file.filename}`;
+    user.imagePath = filePath;
+    await user.save();
+
+    res.status(200).json({ 
+      message: "Profile image updated successfully", 
+      imagePath: filePath 
+    });
+  } catch (error) {
+    console.error("Error uploading profile image:", error);
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error("Error deleting uploaded file:", err);
+      }
+    }
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 // Logout
 exports.logoutUser = (req, res) => {
   req.session.destroy((err) => {
@@ -209,29 +417,31 @@ exports.submitPreferences = async (req, res) => {
   }
 };
 
-
-
-// ✅ Get matches with AI explanations
+// ✅ Get matches with AI explanations - UPDATED to handle forceRefresh and fallback explanations
 exports.getMatches = async (req, res) => {
   try {
     const { prefId } = req.params;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 3;
+    const limit = parseInt(req.query.limit) || 4; // Using 4 to match frontend itemsPerPage
+    const forceRefresh = req.query.forceRefresh === 'true';
     
     // Create a cache key based on preference ID and pagination
     const cacheKey = `matches:${prefId}:page${page}:limit${limit}`;
     
-    // Try to get cached data first
-    const cachedData = await getAsync(cacheKey);
+    // Only check cache if we're not forcing a refresh
+    let cachedData = null;
+    if (!forceRefresh) {
+      cachedData = await getAsync(cacheKey);
+    }
     
     if (cachedData) {
       console.log(`Cache hit for ${cacheKey}`);
       return res.status(200).json(JSON.parse(cachedData));
     }
     
-    console.log(`Cache miss for ${cacheKey}, fetching from database...`);
+    console.log(`Cache miss for ${cacheKey}${forceRefresh ? ' (forced refresh)' : ''}, fetching from database...`);
     
-    // If no cache, proceed with the original logic
+    // If no cache or force refresh, proceed with the original logic
     const pref = await Preference.findById(prefId);
     if (!pref) return res.status(404).json({ message: "Preferences not found" });
 
@@ -247,13 +457,17 @@ exports.getMatches = async (req, res) => {
 
     for (let apt of paginated) {
       const score = calculateMatchScore(pref, apt);
-      // Delay each explanation by 1.5s to stay within limits
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      // Try to get explanation from Groq with increased delay
       let explanation;
       try {
+        // Increase delay to 8 seconds to avoid rate limits
+        await new Promise((resolve) => setTimeout(resolve, 8000));
         explanation = await getMatchExplanation(pref, apt);
       } catch (err) {
-        explanation = "Could not generate explanation.";
+        console.error("Groq API error:", err.response?.data || err.message);
+        // Use our fallback explanation generator instead of a generic message
+        explanation = generateFallbackExplanation(pref, apt);
       }
 
       scored.push({ apartment: apt, matchScore: score, explanation });
@@ -265,7 +479,6 @@ exports.getMatches = async (req, res) => {
     };
     
     // Cache the results for 1 hour (3600 seconds)
-    // Adjust the TTL based on how frequently your data changes
     await setexAsync(cacheKey, 3600, JSON.stringify(responseData));
     
     res.status(200).json(responseData);
@@ -276,14 +489,36 @@ exports.getMatches = async (req, res) => {
   }
 };
 
-// Add a new function to clear cache when preferences change
+// Improved function to clear cache when preferences change
 exports.clearMatchesCache = async (prefId) => {
   try {
-    const limit = 3; // Same as your default limit
-    for (let page = 1; page <= 10; page++) {
-      await delAsync(`matches:${prefId}:page${page}:limit${limit}`);
+    // Try to use Redis client to get all matching keys
+    try {
+      const keys = await redisClient.keys(`matches:${prefId}:*`);
+      
+      if (keys && keys.length > 0) {
+        // Delete all matching keys
+        await redisClient.del(keys);
+        console.log(`Cleared ${keys.length} cache entries for preference ${prefId}`);
+        return;
+      }
+    } catch (keysError) {
+      console.error("Error using redisClient.keys:", keysError);
+      // Fall through to backup method
     }
-    console.log(`Cleared cache for preference ${prefId}`);
+    
+    // Backup method: try to clear individual keys for common page/limit combinations
+    console.log(`Using fallback method to clear cache for preference ${prefId}`);
+    const limits = [3, 4]; // Common limit values used in your app
+    
+    for (let limit of limits) {
+      for (let page = 1; page <= 10; page++) {
+        const cacheKey = `matches:${prefId}:page${page}:limit${limit}`;
+        await delAsync(cacheKey);
+      }
+    }
+    
+    console.log(`Completed fallback cache clearing for preference ${prefId}`);
   } catch (err) {
     console.error("Error clearing cache:", err);
   }
@@ -359,3 +594,218 @@ exports.getSavedApartments = async (req, res) => {
 };
 
 
+// ✅ Get matches with filtering capabilities
+exports.getMatches = async (req, res) => {
+  try {
+    const { prefId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    const sortBy = req.query.sortBy || "matchScore";
+    const sortOrder = req.query.sortOrder || "desc";
+    const forceRefresh = req.query.forceRefresh === 'true';
+    
+    // Extract filter parameters
+    const filters = {
+      minPrice: req.query.minPrice ? parseInt(req.query.minPrice) : null,
+      maxPrice: req.query.maxPrice ? parseInt(req.query.maxPrice) : null,
+      bedrooms: req.query.bedrooms ? req.query.bedrooms.split(',') : null,
+      bathrooms: req.query.bathrooms ? req.query.bathrooms.split(',') : null,
+      neighborhoods: req.query.neighborhoods ? req.query.neighborhoods.split(',') : null,
+      amenities: req.query.amenities ? req.query.amenities.split(',') : null,
+    };
+    
+    // Create a cache key based on all parameters
+    const filterKey = Object.entries(filters)
+      .filter(([_, value]) => value !== null)
+      .map(([key, value]) => `${key}=${Array.isArray(value) ? value.join('-') : value}`)
+      .join(':');
+    
+    const cacheKey = `matches:${prefId}:page${page}:limit${limit}:sort${sortBy}${sortOrder}:${filterKey}`;
+    
+    // Only check cache if we're not forcing a refresh
+    let cachedData = null;
+    if (!forceRefresh) {
+      cachedData = await getAsync(cacheKey);
+    }
+    
+    if (cachedData) {
+      console.log(`Cache hit for ${cacheKey}`);
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+    
+    console.log(`Cache miss for ${cacheKey}${forceRefresh ? ' (forced refresh)' : ''}, fetching from database...`);
+    
+    // If no cache or force refresh, proceed with the original logic
+    const pref = await Preference.findById(prefId);
+    if (!pref) return res.status(404).json({ message: "Preferences not found" });
+
+    // Build the filter query
+    let query = {};
+    
+    // Apply price filter
+    if (filters.minPrice !== null || filters.maxPrice !== null) {
+      query.price = {};
+      if (filters.minPrice !== null) query.price.$gte = filters.minPrice;
+      if (filters.maxPrice !== null) query.price.$lte = filters.maxPrice;
+    }
+    
+    // Apply bedroom filter
+    if (filters.bedrooms && filters.bedrooms.length > 0) {
+      // Handle multiple bedroom options
+      const bedroomConditions = [];
+      
+      if (filters.bedrooms.includes('Studio')) {
+        // For studio, check for '0', 'Studio', or '0 Bedrooms'
+        bedroomConditions.push({ bedrooms: '0' });
+        bedroomConditions.push({ bedrooms: 'Studio' });
+        bedroomConditions.push({ bedrooms: '0 Bedrooms' });
+      }
+      
+      // For numeric bedrooms
+      filters.bedrooms.forEach(bed => {
+        if (bed !== 'Studio') {
+          if (bed === '3+') {
+            // For 3+, match 3 or greater
+            bedroomConditions.push({ bedrooms: { $regex: /^[3-9]/ } });
+            bedroomConditions.push({ bedrooms: { $regex: /^[1-9][0-9]+/ } }); // Two or more digits
+          } else {
+            // Exact match with potential text
+            bedroomConditions.push({ bedrooms: bed });
+            bedroomConditions.push({ bedrooms: { $regex: new RegExp(`^${bed}\\s`) } }); // e.g. "1 Bedroom"
+          }
+        }
+      });
+      
+      if (bedroomConditions.length > 0) {
+        query.$or = bedroomConditions;
+      }
+    }
+    
+    // Apply bathroom filter (similar logic to bedrooms)
+    if (filters.bathrooms && filters.bathrooms.length > 0) {
+      const bathroomConditions = [];
+      
+      filters.bathrooms.forEach(bath => {
+        if (bath === '3+') {
+          bathroomConditions.push({ bathrooms: { $regex: /^[3-9]/ } });
+          bathroomConditions.push({ bathrooms: { $regex: /^[1-9][0-9]+/ } });
+        } else {
+          bathroomConditions.push({ bathrooms: bath });
+          bathroomConditions.push({ bathrooms: { $regex: new RegExp(`^${bath}\\s`) } });
+        }
+      });
+      
+      if (bathroomConditions.length > 0) {
+        // If we already have an $or, we need to use $and to combine with bathrooms
+        if (query.$or) {
+          query.$and = [{ $or: query.$or }, { $or: bathroomConditions }];
+          delete query.$or;
+        } else {
+          query.$or = bathroomConditions;
+        }
+      }
+    }
+    
+    // Apply neighborhood filter
+    if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+      if (!query.$and) query.$and = [];
+      query.$and.push({ neighborhood: { $in: filters.neighborhoods } });
+    }
+    
+    // Apply amenities filter
+    if (filters.amenities && filters.amenities.length > 0) {
+      // Convert to lowercase and handle plurals
+      const normalizedAmenities = filters.amenities.map(amenity => 
+        amenity.toLowerCase().replace(/[\s-]/g, '')
+      );
+      
+      if (!query.$and) query.$and = [];
+      
+      // Create a complex condition for amenities
+      query.$and.push({
+        $or: normalizedAmenities.map(amenity => ({
+          amenities: {
+            $elemMatch: {
+              $regex: new RegExp(amenity, 'i')
+            }
+          }
+        }))
+      });
+    }
+    
+    console.log("Generated query:", JSON.stringify(query, null, 2));
+    
+    // Fetch apartments with filters
+    const allApartments = Object.keys(query).length > 0 
+      ? await Apartment.find(query)
+      : await Apartment.find();
+    
+    // Get total count for pagination
+    const totalCount = allApartments.length;
+    
+    // Apply sorting before pagination
+    let sortedApartments = [...allApartments];
+    
+    // We'll sort by match score later, so only apply database sorting for other fields
+    if (sortBy === 'price') {
+      sortedApartments.sort((a, b) => {
+        return sortOrder === 'asc' ? a.price - b.price : b.price - a.price;
+      });
+    } else if (sortBy === 'dateAdded') {
+      sortedApartments.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    }
+    
+    // Calculate match scores and explanations for sorted apartments
+    const scoredApartments = [];
+    
+    for (let apt of sortedApartments) {
+      const score = calculateMatchScore(pref, apt);
+      
+      // Try to get explanation from Groq with delay between requests
+      let explanation;
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        explanation = await getMatchExplanation(pref, apt);
+      } catch (err) {
+        console.error("Groq API error:", err.response?.data || err.message);
+        explanation = generateFallbackExplanation(pref, apt);
+      }
+      
+      scoredApartments.push({
+        apartment: apt,
+        matchScore: score,
+        explanation
+      });
+    }
+    
+    // If sorting by match score, apply it now
+    if (sortBy === 'matchScore') {
+      scoredApartments.sort((a, b) => {
+        return sortOrder === 'asc' ? a.matchScore - b.matchScore : b.matchScore - a.matchScore;
+      });
+    }
+    
+    // Apply pagination after all sorting and scoring
+    const start = (page - 1) * limit;
+    const paginatedResults = scoredApartments.slice(start, start + limit);
+    
+    const responseData = {
+      results: paginatedResults,
+      totalCount,
+      filteredCount: scoredApartments.length
+    };
+    
+    // Cache the results for 1 hour (3600 seconds)
+    await setexAsync(cacheKey, 3600, JSON.stringify(responseData));
+    
+    res.status(200).json(responseData);
+    
+  } catch (err) {
+    console.error("Error in getMatches:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
