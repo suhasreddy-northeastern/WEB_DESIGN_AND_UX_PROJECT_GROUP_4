@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -51,6 +51,8 @@ import UserRoute from "./routes/UserRoute";
 import { checkSession } from "./redux/sessionActions";
 import PropertyDetailsPage from "./pages/PropertyDetailsPage";
 import LandingPage from "./pages/LandingPage";
+import ApartmentMatches from "./pages/ApartmentPage";
+import ScrollAndFocusHandler from "./components/common/ScrollAndFocusHandler";
 
 // 👇 Separate component for route logic
 function AppRoutes() {
@@ -86,6 +88,7 @@ function AppRoutes() {
 
   return (
     <>
+      <ScrollAndFocusHandler />
       {!hideNavbar && <Navbar />}
       <Routes>
         {/* Public */}
@@ -172,6 +175,8 @@ function AppRoutes() {
 
         <Route path="/landingPage" element={<LandingPage />} />
         <Route path="/propertyDetails" element={<PropertyDetailsPage />} />
+        <Route path="/apartmentMatch" element={<ApartmentMatches />} />
+
         <Route path="/resource/:resourceType" element={<ResourcePage />} />
       </Routes>
       {!hideFooter && <Footer />}
@@ -181,17 +186,38 @@ function AppRoutes() {
 
 // ✅ Main App component
 function App() {
+  const mainRef = useRef(null);
+
+  const handleSkipToContent = (e) => {
+    e.preventDefault();
+    const main = mainRef.current;
+    if (main) {
+      main.focus();
+    }
+  };
+
   return (
-    <Provider store={store}>
-      <ColorModeProvider>
-        <Router>
-          <Box display="flex" flexDirection="column" minHeight="100vh">
-            <CssBaseline />
-            <AppRoutes />
-          </Box>
-        </Router>
-      </ColorModeProvider>
-    </Provider>
+    <>
+      <a
+        href="#main-content"
+        className="skip-link"
+        onClick={handleSkipToContent}
+      >
+        Skip to main content
+      </a>
+      <Provider store={store}>
+        <ColorModeProvider>
+          <Router>
+            <Box display="flex" flexDirection="column" minHeight="100vh">
+              <CssBaseline />
+              <main id="main-content" ref={mainRef} tabIndex={-1}>
+                <AppRoutes />
+              </main>
+            </Box>
+          </Router>
+        </ColorModeProvider>
+      </Provider>
+    </>
   );
 }
 
