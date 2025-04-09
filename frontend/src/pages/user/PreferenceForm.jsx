@@ -52,8 +52,6 @@ const PreferenceForm = () => {
   
   // Get current theme mode for styling
   const isDarkMode = theme.palette.mode === 'dark';
-  
-  console.log("Redux user object:", user);
 
   const currentQuestion = questions[currentIndex];
   const selected = answers[currentQuestion.key];
@@ -63,11 +61,40 @@ const PreferenceForm = () => {
     let redirectTimer;
     if (successModalOpen && prefId) {
       redirectTimer = setTimeout(() => {
-        navigate(`/matches/${prefId}`);
-      }, 2000); // Redirect after 2 seconds
+        // Force refresh parameter ensures new match scores are calculated
+        navigate(`/matches/${prefId}?forceRefresh=true`);
+      }, 2000);
     }
     return () => clearTimeout(redirectTimer);
   }, [successModalOpen, prefId, navigate]);
+
+  // Check if we have existing preferences to pre-fill
+  useEffect(() => {
+    const fetchExistingPreferences = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:4000/api/user/preferences/latest",
+          { withCredentials: true }
+        );
+        
+        if (res.data && res.data.preference) {
+          // Map back from DB format to form format
+          const pref = res.data.preference;
+          
+          // You could add logic here to convert DB values back to form values
+          // This is a simplified example
+          // const formattedAnswers = {};
+          // setAnswers(formattedAnswers);
+        }
+      } catch (err) {
+        // It's okay if this fails - user may not have preferences yet
+        console.log("No existing preferences found");
+      }
+    };
+    
+    // Uncomment to enable loading existing preferences
+    // fetchExistingPreferences();
+  }, []);
 
   const handleSelect = (value) => {
     if (currentQuestion.type === "checkbox") {

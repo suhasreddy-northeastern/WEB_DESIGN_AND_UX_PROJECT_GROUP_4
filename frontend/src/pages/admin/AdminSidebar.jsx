@@ -10,7 +10,7 @@ import {
   Typography,
   Divider,
 } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import PeopleIcon from '@mui/icons-material/People';
@@ -18,12 +18,33 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
 import HomeIcon from '@mui/icons-material/Home';
+import LogoutIcon from '@mui/icons-material/Logout';
+import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../redux/userSlice'; // Adjust import path as needed
 
 const AdminSidebar = () => {
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const isDarkMode = theme.palette.mode === 'dark';
   const primaryColor = theme.palette.primary.main;
+
+  // Use EXACT same implementation as in ProfileMenu component
+  const handleLogout = async () => {
+    try {
+      // Using the exact same URL format and axios configuration as ProfileMenu
+      await axios.post("http://localhost:4000/api/user/logout", {}, { withCredentials: true });
+      dispatch(logout());
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if there's an error, still try to logout on client side
+      dispatch(logout());
+      navigate("/login");
+    }
+  };
 
   const menuItems = [
     { name: 'Home', icon: <HomeIcon />, path: '/' },
@@ -182,6 +203,40 @@ const AdminSidebar = () => {
               />
             </ListItem>
           ))}
+          
+          {/* Logout Button using exact same implementation as ProfileMenu */}
+          <ListItem
+            button
+            onClick={handleLogout}
+            sx={{
+              mb: 0.5,
+              borderRadius: 1.5,
+              color: theme.palette.error.main,
+              '&:hover': {
+                backgroundColor: isDarkMode
+                  ? 'rgba(239, 83, 80, 0.1)'
+                  : 'rgba(239, 83, 80, 0.05)',
+              },
+              py: 1,
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                color: theme.palette.error.main,
+                minWidth: 36,
+                fontSize: '1.2rem',
+              }}
+            >
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary="Logout"
+              primaryTypographyProps={{
+                fontWeight: 500,
+                fontSize: '0.9rem',
+              }}
+            />
+          </ListItem>
         </List>
       </Box>
 

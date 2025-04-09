@@ -29,11 +29,8 @@ exports.registerBroker = async (req, res) => {
       return res.status(400).json({ error: "Email is already registered" });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // Create full path for document URL
-    const licenseDocumentUrl = `http://localhost:4000/uploads/${licenseDocument}`;
+    const licenseDocumentUrl = `/uploads/${licenseDocument}`;
     
     console.log("License document URL:", licenseDocumentUrl);
 
@@ -41,7 +38,7 @@ exports.registerBroker = async (req, res) => {
     const newBroker = new User({
       fullName,
       email,
-      password: hashedPassword, // Use the hashed password
+      password,
       phone,
       licenseNumber,
       licenseDocumentUrl,

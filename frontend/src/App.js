@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { CssBaseline, Box } from "@mui/material";
-import { Provider, useDispatch } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import store from "./redux/store";
 import { ColorModeProvider } from "./components/common/theme/ColorModeContext";
 
@@ -26,6 +26,7 @@ import MatchResults from "./pages/user/UserMatchResults";
 import PreferenceForm from "./pages/user/PreferenceForm";
 import SavedListings from "./pages/user/SavedListings";
 import ResourcePage from "./pages/ResourcePage";
+import UserProfile from "./pages/user/UserProfile";
 
 // Broker Dashboard Pages
 import BrokerLayout from "./pages/broker/BrokerLayout";
@@ -35,6 +36,7 @@ import BrokerInquiries from "./pages/broker/BrokerInquiries";
 import BrokerProfile from "./pages/broker/BrokerProfile";
 import BrokerRegistration from "./pages/broker/BrokerRegistration";
 import BrokerSettings from "./pages/broker/BrokerSettings";
+import BrokerAnalytics from "./pages/broker/BrokerAnalytics";
 
 // Admin Dashboard Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -53,12 +55,14 @@ import PropertyDetailsPage from "./pages/PropertyDetailsPage";
 import LandingPage from "./pages/LandingPage";
 import ApartmentMatches from "./pages/ApartmentPage";
 import ScrollAndFocusHandler from "./components/common/ScrollAndFocusHandler";
+import axios from "axios";
 
 // 👇 Separate component for route logic
 function AppRoutes() {
   const location = useLocation();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
+  const user = useSelector((state) => state.user.user);
 
   const hideNavbar =
     ["/login", "/signup"].includes(location.pathname) ||
@@ -70,6 +74,33 @@ function AppRoutes() {
     location.pathname.startsWith("/broker/") ||
     location.pathname.startsWith("/admin/");
 
+  // Function to fetch and update broker-specific data
+  const fetchBrokerData = async () => {
+    try {
+      if (user && user.type === "broker") {
+        console.log("Fetching broker data for user:", user.email);
+        const response = await axios.get(
+          "http://localhost:4000/api/broker/me",
+          {
+            withCredentials: true,
+          }
+        );
+
+        if (response.data) {
+          // Update the Redux store with broker-specific data
+          dispatch({
+            type: "user/updateUser",
+            payload: response.data,
+          });
+          console.log("Broker data updated successfully");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching broker data:", error);
+    }
+  };
+
+  // Initial session check
   useEffect(() => {
     const fetchSession = async () => {
       await dispatch(checkSession());
@@ -77,6 +108,29 @@ function AppRoutes() {
     };
     fetchSession();
   }, [dispatch]);
+
+  // Fetch broker data when user changes
+  useEffect(() => {
+    if (user && user.type === "broker") {
+      fetchBrokerData();
+    }
+  }, [user?.email]); // Only run when the user's email changes (i.e., on login/logout)
+
+  // Set up a refresh interval for broker data
+  useEffect(() => {
+    let intervalId;
+
+    if (user && user.type === "broker" && !user.isApproved) {
+      // If user is a broker and not approved, check status every 5 minutes
+      intervalId = setInterval(() => {
+        fetchBrokerData();
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user]);
 
   if (loading) {
     return (
@@ -137,6 +191,8 @@ function AppRoutes() {
           <Route path="add-listing" element={<AgentApartmentForm />} />
           <Route path="profile" element={<BrokerProfile />} />
           <Route path="settings" element={<BrokerSettings />} />
+          <Route path="analytics" element={<BrokerAnalytics />} />{" "}
+          {/* Add analytics route */}
         </Route>
 
         {/* Backward compatibility - redirects to the new location within broker layout */}
@@ -164,6 +220,30 @@ function AppRoutes() {
           element={
             <UserRoute>
               <SavedListings />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <UserRoute>
+              <UserProfile />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/profile/password"
+          element={
+            <UserRoute>
+              <UserProfile initialTab={1} />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/profile/preferences"
+          element={
+            <UserRoute>
+              <UserProfile initialTab={2} />
             </UserRoute>
           }
         />

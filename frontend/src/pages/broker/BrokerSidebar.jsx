@@ -19,6 +19,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
+import BarChartIcon from '@mui/icons-material/BarChart'; // Added for Analytics
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../redux/userSlice'; // Adjust import path as needed
@@ -46,6 +47,7 @@ const BrokerSidebar = () => {
     { name: 'Dashboard', icon: <DashboardIcon />, path: '/broker/dashboard' },
     { name: 'My Listings', icon: <ListAltIcon />, path: '/broker/listings' },
     { name: 'Inquiries', icon: <QuestionAnswerIcon />, path: '/broker/inquiries' },
+    { name: 'Analytics', icon: <BarChartIcon />, path: '/broker/analytics' }, // Added Analytics
     { name: 'Add Listing', icon: <AddCircleOutlineIcon />, path: '/broker/add-listing' },
     { name: 'Profile', icon: <PersonIcon />, path: '/broker/profile' },
     { name: 'Settings', icon: <SettingsIcon />, path: '/broker/settings' },
@@ -58,9 +60,9 @@ const BrokerSidebar = () => {
     return location.pathname === path;
   };
 
-  // Group menu items by category
-  const mainMenuItems = menuItems.slice(0, 5);
-  const accountMenuItems = menuItems.slice(5);
+  // Group menu items by category (now with Analytics in main menu)
+  const mainMenuItems = menuItems.slice(0, 6);
+  const accountMenuItems = menuItems.slice(6);
 
   return (
     <Paper
