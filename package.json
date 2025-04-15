@@ -21,5 +21,8 @@
   "homepage": "https://github.com/suhasreddy-northeastern/WEB_DESIGN_AND_UX_PROJECT_GROUP_4#readme",
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
   }
 }
