@@ -28,7 +28,7 @@ import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import PoolIcon from "@mui/icons-material/Pool";
 import axios from "axios";
 
-const UserHome = () => {
+const UserHome = ({ onActionClick }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const heroTextRef = useRef(null);
@@ -75,62 +75,8 @@ const UserHome = () => {
     return () => ctx.revert();
   }, []);
 
-  // State for login dialog
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const fetchLatestPreference = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(
-        "http://localhost:4000/api/user/preferences/latest",
-        {
-          withCredentials: true,
-        }
-      );
-
-      const prefId = res.data.preference?._id;
-      if (prefId) {
-        navigate(`/matches/${prefId}`);
-      } else {
-        navigate("/preferences");
-      }
-    } catch (err) {
-      console.error("Error fetching preferences:", err);
-      if (err.response?.status === 404) {
-        navigate("/preferences");
-      } else {
-        alert("Something went wrong. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle button clicks for non-logged in users
-  const handleActionClick = (action) => {
-    if (action === "recommendations") {
-      fetchLatestPreference();
-    } else if (action === "preferences") {
-      navigate("/preferences");
-    }
-  };
-
-  // Handle login dialog actions
-  const handleLogin = () => {
-    setLoginDialogOpen(false);
-    navigate("/login", {
-      state: {
-        from: "/",
-        pendingAction: pendingAction,
-      },
-    });
-  };
-
-  const handleCloseDialog = () => {
-    setLoginDialogOpen(false);
-  };
+  // We'll use the onActionClick prop that's passed from the parent (Home component)
+  // This ensures we use the authentication-checking logic from the parent
 
   return (
     <>
@@ -171,7 +117,7 @@ const UserHome = () => {
                 <Button
                   variant="contained"
                   size="large"
-                  onClick={() => handleActionClick("preferences")}
+                  onClick={() => onActionClick("preferences")}
                   sx={{
                     borderRadius: 6,
                     px: 3,
@@ -619,7 +565,7 @@ const UserHome = () => {
             <Button
               variant="contained"
               size="large"
-              onClick={() => handleActionClick("preferences")}
+              onClick={() => onActionClick("preferences")}
               sx={{
                 borderRadius: 6,
                 px: 4,

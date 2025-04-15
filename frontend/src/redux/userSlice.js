@@ -9,7 +9,7 @@ export const fetchBrokerStatus = createAsyncThunk(
     
     // Only proceed if the user is a broker
     if (user && user.type === "broker") {
-      const response = await axios.get("/api/broker/me", {
+      const response = await axios.get("/broker/me", {
         withCredentials: true,
       });
       return response.data;

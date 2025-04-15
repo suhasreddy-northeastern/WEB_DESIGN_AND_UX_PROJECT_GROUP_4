@@ -9,11 +9,12 @@ import {
   Grid,
   InputAdornment,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Link
 } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../../redux/userSlice';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import axios from 'axios';
 import GoogleLoginButton from "../common/buttons/GoogleLoginButton";
 import Visibility from '@mui/icons-material/Visibility';
@@ -144,6 +145,27 @@ const Login = () => {
     setShowPassword(!showPassword);
   };
 
+  // Helper function to load complete user profile
+  const fetchCompleteUserProfile = async () => {
+    try {
+      // This is the same API call that UserProfile uses to refresh data
+      const sessionRes = await axios.get('http://localhost:4000/api/user/session', {
+        withCredentials: true
+      });
+      
+      if (sessionRes.data && sessionRes.data.user) {
+        // This ensures we have the complete, properly formatted user data
+        dispatch(loginSuccess(sessionRes.data.user));
+        console.log('Complete user profile loaded successfully');
+        return sessionRes.data.user;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching complete user profile:', error);
+      return null;
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -162,7 +184,6 @@ const Login = () => {
       if (userData && userData.type === 'broker') {
         try {
           // Make an additional API call to get broker-specific data
-          // Add back the withCredentials option that was commented out
           const brokerRes = await axios.get('http://localhost:4000/api/broker/me', {
             withCredentials: true
           });
@@ -173,7 +194,7 @@ const Login = () => {
             ...brokerRes.data // This should include the isApproved status
           };
           
-          // Dispatch login with the combined data
+          // Initial dispatch with broker data
           dispatch(loginSuccess(updatedUserData));
           
           console.log('Broker login successful with approval status:', updatedUserData.isApproved);
@@ -186,6 +207,9 @@ const Login = () => {
         // For non-broker users, just dispatch the regular user data
         dispatch(loginSuccess(userData));
       }
+      
+      // IMPORTANT: Now fetch complete user profile to ensure all data is loaded properly
+      await fetchCompleteUserProfile();
       
       // Navigate to home page or appropriate dashboard
       navigate('/');
@@ -306,6 +330,16 @@ const Login = () => {
                       )}
                     </Button>
                     <GoogleLoginButton onClick={() => alert("Google Login Coming Soon!")} disabled={loading} />
+                    
+                    {/* Added Sign Up Link */}
+                    <Box sx={{ textAlign: 'center', mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Don't have an account?{' '}
+                        <Link component={RouterLink} to="/signup" sx={{ color: '#00b386', fontWeight: 'medium' }}>
+                          Sign up
+                        </Link>
+                      </Typography>
+                    </Box>
                   </Box>
                 </form>
               </Box>

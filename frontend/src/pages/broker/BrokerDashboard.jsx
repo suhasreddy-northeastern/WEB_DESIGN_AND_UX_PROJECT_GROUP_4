@@ -29,7 +29,8 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import { updateUser } from '../../redux/userSlice'; 
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { checkSession } from '../../redux/sessionActions'; // Adjust path as needed
+import { checkSession } from '../../redux/sessionActions'; 
+import EventIcon from '@mui/icons-material/Event';
 
 dayjs.extend(relativeTime);
 
@@ -91,6 +92,7 @@ const BrokerDashboard = () => {
     activeListings: 0,
     newInquiries: 0,
     pendingApprovals: 0,
+    pendingTours: 0 
   });
   const [inquiries, setInquiries] = useState([]);
   const [listingPerformance, setListingPerformance] = useState([]);
@@ -114,7 +116,7 @@ const refreshApprovalStatus = async () => {
   setRefreshingStatus(true);
   try {
     // Get updated user data directly from the API
-    const response = await axios.get('/api/broker/me', {
+    const response = await axios.get('/broker/me', {
       withCredentials: true,
     });
     
@@ -369,6 +371,14 @@ const refreshApprovalStatus = async () => {
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
+  <StatCard
+    icon={<EventIcon sx={{ color: 'white', fontSize: 28 }} />}
+    count={stats.pendingTours || 0}
+    label="Tour Requests"
+    backgroundColor="#3f51b5"
+  />
+</Grid>
+        <Grid item xs={12} sm={6} md={3}>
           <StatCard
             icon={<AccessTimeIcon sx={{ color: 'white', fontSize: 28 }} />}
             count={stats.pendingApprovals}
@@ -458,6 +468,59 @@ const refreshApprovalStatus = async () => {
             </CardContent>
           </Card>
         </Grid>
+        {/* Upcoming Tours Section */}
+<Grid container spacing={3} sx={{ mt: 3 }}>
+  <Grid item xs={12}>
+    <Card
+      elevation={2}
+      sx={{
+        borderRadius: 2,
+        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
+        border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: isDarkMode 
+            ? '0 8px 24px rgba(0, 0, 0, 0.25)'
+            : '0 8px 24px rgba(35, 206, 163, 0.1)',
+        },
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <div>
+            <Typography variant="h6" fontWeight="bold" color="text.primary">
+              Upcoming Tours
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Property tours scheduled in the next 7 days
+            </Typography>
+          </div>
+          <Button
+            component={Link}
+            to="/broker/tours"
+            endIcon={<ArrowForwardIcon />}
+            sx={{ 
+              color: primaryColor,
+              '&:hover': {
+                backgroundColor: 'transparent',
+                textDecoration: 'underline', 
+              }
+            }}
+          >
+            View All
+          </Button>
+        </Box>
+        <Divider sx={{ mb: 2 }} />
+        <List sx={{ p: 0 }}>
+          {/* This would normally use actual tour data */}
+          <Typography variant="body2" textAlign="center" py={3} color="text.secondary">
+            No upcoming tours scheduled
+          </Typography>
+        </List>
+      </CardContent>
+    </Card>
+  </Grid>
+</Grid>
         <Grid item xs={12} md={6}>
           <Card
             elevation={2}

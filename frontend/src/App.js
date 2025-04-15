@@ -5,7 +5,7 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
-import { CssBaseline, Box } from "@mui/material";
+import { CssBaseline, Box, CircularProgress } from "@mui/material";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import store from "./redux/store";
 import { ColorModeProvider } from "./components/common/theme/ColorModeContext";
@@ -27,22 +27,28 @@ import PreferenceForm from "./pages/user/PreferenceForm";
 import SavedListings from "./pages/user/SavedListings";
 import ResourcePage from "./pages/ResourcePage";
 import UserProfile from "./pages/user/UserProfile";
+import ApartmentMapPage from "./components/map/ApartmentMapPage";
+import UserTours from "./pages/user/UserTours";
 
 // Broker Dashboard Pages
 import BrokerLayout from "./pages/broker/BrokerLayout";
 import BrokerDashboard from "./pages/broker/BrokerDashboard";
 import BrokerListings from "./pages/broker/BrokerListings";
 import BrokerInquiries from "./pages/broker/BrokerInquiries";
+import BrokerTours from "./pages/broker/BrokerTours"; 
 import BrokerProfile from "./pages/broker/BrokerProfile";
 import BrokerRegistration from "./pages/broker/BrokerRegistration";
 import BrokerSettings from "./pages/broker/BrokerSettings";
 import BrokerAnalytics from "./pages/broker/BrokerAnalytics";
+import BrokerListingDetail from "./pages/broker/BrokerListingDetail";
 
 // Admin Dashboard Pages
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBrokers from "./pages/admin/AdminBrokers";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminListings from "./pages/admin/AdminListings";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 // Route Guards
 import AdminRoute from "./routes/AdminRoute";
@@ -52,6 +58,11 @@ import UserRoute from "./routes/UserRoute";
 // Auth Session
 import { checkSession } from "./redux/sessionActions";
 import axios from "axios";
+import { updateUser } from "./redux/userSlice";
+
+// Maintenance Mode
+import { MaintenanceProvider, useMaintenanceMode } from "./components/maintenance/MaintenanceContext";
+import MaintenanceMode from "./components/maintenance/MaintenanceMode";
 
 // 👇 Separate component for route logic
 function AppRoutes() {
@@ -59,6 +70,11 @@ function AppRoutes() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const user = useSelector((state) => state.user.user);
+  const isAuthenticated = useSelector((state) => state.user.isAuthenticated);
+  
+  
+  // Get maintenance mode status
+  const { isInMaintenanceMode, maintenanceMessage, estimatedTime, loading: maintenanceLoading, fetchMaintenanceStatus } = useMaintenanceMode();
 
   const hideNavbar =
     ["/login", "/signup"].includes(location.pathname) ||
@@ -84,10 +100,7 @@ function AppRoutes() {
 
         if (response.data) {
           // Update the Redux store with broker-specific data
-          dispatch({
-            type: "user/updateUser",
-            payload: response.data,
-          });
+          dispatch(updateUser(response.data));
           console.log("Broker data updated successfully");
         }
       }
@@ -96,21 +109,47 @@ function AppRoutes() {
     }
   };
 
-  // Initial session check
+  // Initial session check - runs once on component mount
   useEffect(() => {
     const fetchSession = async () => {
-      await dispatch(checkSession());
-      setLoading(false);
+      try {
+        await dispatch(checkSession());
+
+        // If logged in as admin, refresh maintenance status
+      if (user && user.type === "admin") {
+        fetchMaintenanceStatus();
+      }
+      } catch (error) {
+        console.error("Session check failed:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchSession();
   }, [dispatch]);
+
+  // Set up periodic session refresh for authenticated users
+  useEffect(() => {
+    let intervalId;
+
+    if (isAuthenticated) {
+      // Refresh session every 10 minutes for authenticated users
+      intervalId = setInterval(() => {
+        dispatch(checkSession());
+      }, 10 * 60 * 1000); // 10 minutes
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isAuthenticated, dispatch]);
 
   // Fetch broker data when user changes
   useEffect(() => {
     if (user && user.type === "broker") {
       fetchBrokerData();
     }
-  }, [user?.email]); // Only run when the user's email changes (i.e., on login/logout)
+  }, [user?.email, dispatch]); // Only run when the user's email changes (i.e., on login/logout)
 
   // Set up a refresh interval for broker data
   useEffect(() => {
@@ -126,14 +165,36 @@ function AppRoutes() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [user]);
+  }, [user, dispatch]);
 
-  if (loading) {
+  // Handle loading state
+  if (loading || maintenanceLoading) {
     return (
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <p>Loading session...</p>
-      </div>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "80vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
+  }
+
+  // Create an array of paths that should be accessible during maintenance mode
+  const allowedPaths = [
+    "/login",
+    "/signup"
+  ];
+
+  // Check if maintenance mode is active and user is not an admin
+  // Also check if the current path is allowed during maintenance mode
+  if (isInMaintenanceMode && 
+      (!user || user.type !== "admin") && 
+      !allowedPaths.includes(location.pathname)) {
+    return <MaintenanceMode message={maintenanceMessage} estimatedTime={estimatedTime} />;
   }
 
   return (
@@ -145,6 +206,7 @@ function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/broker/register" element={<BrokerRegistration />} />
+        <Route path="/map" element={<ApartmentMapPage />} /> {/* New map route */}
 
         {/* Admin Layout with nested routes */}
         <Route
@@ -158,18 +220,9 @@ function AppRoutes() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="brokers" element={<AdminBrokers />} />
           <Route path="users" element={<AdminUsers />} />
-          <Route path="listings" element={<div>Admin Listings Page</div>} />
+          <Route path="listings" element={<AdminListings />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
-
-        {/* Legacy admin route */}
-        <Route
-          path="/employees"
-          element={
-            <AdminRoute>
-              <EmployeesPage />
-            </AdminRoute>
-          }
-        />
 
         {/* Broker Layout with nested routes */}
         <Route
@@ -182,12 +235,13 @@ function AppRoutes() {
         >
           <Route path="dashboard" element={<BrokerDashboard />} />
           <Route path="listings" element={<BrokerListings />} />
+          <Route path="listings/:id" element={<BrokerListingDetail />} />
           <Route path="inquiries" element={<BrokerInquiries />} />
+          <Route path="tours" element={<BrokerTours />} /> {/* Add broker tours page */}
           <Route path="add-listing" element={<AgentApartmentForm />} />
           <Route path="profile" element={<BrokerProfile />} />
           <Route path="settings" element={<BrokerSettings />} />
-          <Route path="analytics" element={<BrokerAnalytics />} />{" "}
-          {/* Add analytics route */}
+          <Route path="analytics" element={<BrokerAnalytics />} />
         </Route>
 
         {/* Backward compatibility - redirects to the new location within broker layout */}
@@ -218,6 +272,14 @@ function AppRoutes() {
             </UserRoute>
           }
         />
+        <Route
+          path="/user/tours"
+          element={
+            <UserRoute>
+              <UserTours />
+            </UserRoute>
+          }
+        /> {/* Add user tours page */}
         <Route
           path="/profile"
           element={
@@ -259,12 +321,14 @@ function App() {
   return (
     <Provider store={store}>
       <ColorModeProvider>
-        <Router>
-          <Box display="flex" flexDirection="column" minHeight="100vh">
-            <CssBaseline />
-            <AppRoutes />
-          </Box>
-        </Router>
+        <MaintenanceProvider>
+          <Router>
+            <Box display="flex" flexDirection="column" minHeight="100vh">
+              <CssBaseline />
+              <AppRoutes />
+            </Box>
+          </Router>
+        </MaintenanceProvider>
       </ColorModeProvider>
     </Provider>
   );

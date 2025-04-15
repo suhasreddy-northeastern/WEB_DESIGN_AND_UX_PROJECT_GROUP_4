@@ -76,7 +76,6 @@ const AdminLayout = () => {
     { name: 'Users', icon: <PeopleIcon />, path: '/admin/users' },
     { name: 'Listings', icon: <ListAltIcon />, path: '/admin/listings' },
     { name: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' },
-    { name: 'Profile', icon: <PersonIcon />, path: '/profile' },
   ];
 
   const isActive = (path) => {

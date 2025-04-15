@@ -53,10 +53,60 @@ const ProfileMenu = ({ user }) => {
     setTimeout(() => setIsSpinning(false), 500); 
   };
 
+  // Helper function to get the full image URL
+  const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    
+    // If it's already an absolute URL, return as is
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    // If it's a relative path, prepend the base URL
+    if (imagePath.startsWith('/')) {
+      return `${window.location.origin}${imagePath}`;
+    }
+    
+    // Handle other cases if needed
+    return imagePath;
+  };
+
+  // Get user's initials for the fallback avatar
+  const getUserInitials = () => {
+    if (user?.fullName) {
+      return user.fullName.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
+  // Log image path for debugging
+  React.useEffect(() => {
+    if (user) {
+      console.log("ProfileMenu user data:", user);
+      console.log("Image path:", user.imagePath);
+      if (user.imagePath) {
+        console.log("Full image URL:", getFullImageUrl(user.imagePath));
+      }
+    }
+  }, [user]);
+
   return (
     <>
       <IconButton onClick={handleOpen}>
-        <Avatar alt={user?.email} src="/images/default-avatar.png" />
+        <Avatar 
+          alt={user?.fullName || user?.email} 
+          src={getFullImageUrl(user?.imagePath)}
+          sx={{ 
+            bgcolor: theme.palette.primary.main,
+            width: 40,
+            height: 40
+          }}
+        >
+          {getUserInitials()}
+        </Avatar>
       </IconButton>
       <Menu
         anchorEl={anchorEl}
@@ -74,25 +124,39 @@ const ProfileMenu = ({ user }) => {
           },
         }}
       >
-        <Box px={2} py={1.5}>
-          <Typography
-            variant="subtitle1"
-            fontWeight={600}
-            sx={{
-              wordBreak: "break-word",
-              lineHeight: 1.4,
-              mb: 0.5,
+        <Box px={2} py={1.5} display="flex" alignItems="center">
+          <Avatar 
+            alt={user?.fullName || user?.email} 
+            src={getFullImageUrl(user?.imagePath)}
+            sx={{ 
+              width: 50, 
+              height: 50, 
+              mr: 2,
+              bgcolor: theme.palette.primary.main
             }}
           >
-            {user.name || "User"}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ wordBreak: "break-word", fontSize: 13 }}
-          >
-            {user.email}
-          </Typography>
+            {getUserInitials()}
+          </Avatar>
+          <Box>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              sx={{
+                wordBreak: "break-word",
+                lineHeight: 1.4,
+                mb: 0.5,
+              }}
+            >
+              {user.fullName || "User"}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ wordBreak: "break-word", fontSize: 13 }}
+            >
+              {user.email}
+            </Typography>
+          </Box>
         </Box>
 
         <Divider sx={{ my: 1 }} />

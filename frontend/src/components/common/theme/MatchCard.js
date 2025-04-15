@@ -15,7 +15,6 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import axios from "axios";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -133,22 +132,21 @@ const MatchCard = ({
     
     setSaving(true);
     try {
-      await axios.post(
-        "http://localhost:4000/api/user/save",
-        { apartmentId: apt._id },
-        { withCredentials: true }
-      );
-      
-      // Update local state
+      // Calculate the new saved status (opposite of current)
       const newSavedStatus = !savedStatus;
+      
+      // Update local state first for immediate UI feedback
       setSavedStatus(newSavedStatus);
       
-      // Notify parent component if callback provided
+      // Call the parent component's onSaveToggle function
+      // This is critical - pass the apartment ID and the NEW status
       if (onSaveToggle) {
-        onSaveToggle(apt._id, newSavedStatus);
+        await onSaveToggle(apt._id, newSavedStatus);
       }
     } catch (err) {
       console.error("Save toggle error:", err);
+      // If there was an error, revert the UI
+      setSavedStatus(!savedStatus);
     } finally {
       setSaving(false);
     }

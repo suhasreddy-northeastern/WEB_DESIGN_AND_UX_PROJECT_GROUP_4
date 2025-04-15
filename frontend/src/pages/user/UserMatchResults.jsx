@@ -202,10 +202,10 @@ const MatchResults = () => {
         ...prev,
         [aptId]: isSaved,
       }));
-
+  
       // Call the API to save/unsave
       await axios.post(
-        "/api/user/save",
+        "http://localhost:4000/api/user/save", // Fixed API URL with base URL
         { apartmentId: aptId },
         {
           withCredentials: true,
@@ -220,7 +220,6 @@ const MatchResults = () => {
       }));
     }
   };
-
   const getMatchColor = (score) => {
     if (score >= 80) return "#36B37E";
     if (score >= 50) return "#FFAB00";

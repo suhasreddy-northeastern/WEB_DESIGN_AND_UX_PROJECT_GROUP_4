@@ -20,15 +20,22 @@ const BrokerEditListing = ({ open, onClose, apartmentId, onUpdate }) => {
   useEffect(() => {
     if (apartmentId && open) {
       setLoading(true);
-      axios.get(`/apartments/${apartmentId}`)
+      axios.get(`broker/listings/${apartmentId}`)
         .then((res) => {
           const apt = res.data;
           setFormData({
             title: apt.title || '',
             price: apt.price || '',
             bedrooms: apt.bedrooms || '',
-            location: apt.location || '',
+            location: apt.location?.address || '',
             amenities: apt.amenities?.join(', ') || '',
+            // Add any additional fields you want to edit
+            bathrooms: apt.bathrooms || '',
+            sqft: apt.sqft || '',
+            neighborhood: apt.neighborhood || '',
+            description: apt.description || '',
+            type: apt.type || 'Rent',
+            isActive: apt.isActive === undefined ? true : apt.isActive,
           });
         })
         .catch((err) => console.error('Error loading apartment:', err))

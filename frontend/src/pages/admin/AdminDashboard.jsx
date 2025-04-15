@@ -104,6 +104,9 @@ const AdminDashboard = () => {
     totalListings: 0,
   });
   const [pendingBrokers, setPendingBrokers] = useState([]);
+  const [allBrokers, setAllBrokers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [listings, setListings] = useState([]);
   const [tabValue, setTabValue] = useState(0);
   const [selectedBroker, setSelectedBroker] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -134,18 +137,38 @@ const AdminDashboard = () => {
         });
         setPendingBrokers(pendingBrokersRes.data || []);
         
-        // In a real app, fetch actual stats from backend
-        // Using mock stats for demonstration
+        // Get all brokers
+        const allBrokersRes = await axios.get('/api/admin/brokers', {
+          withCredentials: true,
+        });
+        setAllBrokers(allBrokersRes.data || []);
+        
+        // Get all users
+        const allUsersRes = await axios.get('/api/admin/users', {
+          withCredentials: true,
+        });
+        setAllUsers(allUsersRes.data || []);
+        
+        // Get all listings
+        const listingsRes = await axios.get('/api/apartments', {
+          withCredentials: true,
+        });
+        setListings(listingsRes.data || []);
+        
+        // Update stats with real data
         setStats({
-          totalUsers: 128,
-          totalBrokers: 24,
+          totalUsers: allUsersRes.data.length,
+          totalBrokers: allBrokersRes.data.filter(broker => broker.isApproved).length,
           pendingBrokers: pendingBrokersRes.data.length,
-          totalListings: 187,
+          totalListings: listingsRes.data.length,
         });
       } catch (error) {
         console.error('Error fetching admin data:', error);
         // Use empty data on error
         setPendingBrokers([]);
+        setAllBrokers([]);
+        setAllUsers([]);
+        setListings([]);
         setStats({
           totalUsers: 0,
           totalBrokers: 0,
@@ -185,6 +208,16 @@ const AdminDashboard = () => {
       
       // Update UI to show broker as approved
       setPendingBrokers(pendingBrokers.filter(broker => broker._id !== brokerId));
+      
+      // Update all brokers list
+      setAllBrokers(prevBrokers => 
+        prevBrokers.map(broker => 
+          broker._id === brokerId 
+            ? { ...broker, isApproved: true } 
+            : broker
+        )
+      );
+      
       setStats(prev => ({
         ...prev,
         pendingBrokers: prev.pendingBrokers - 1,
@@ -209,10 +242,30 @@ const AdminDashboard = () => {
         withCredentials: true,
       });
       
-      // Update UI to show broker as revoked if they were previously approved
-      // In practice, you might want to refresh the full list instead
-      showSnackbar('Broker approval revoked successfully');
+      // Update the brokers list to reflect the revocation
+      setAllBrokers(prevBrokers => 
+        prevBrokers.map(broker => 
+          broker._id === brokerId 
+            ? { ...broker, isApproved: false } 
+            : broker
+        )
+      );
       
+      setStats(prev => ({
+        ...prev,
+        totalBrokers: prev.totalBrokers - 1,
+        pendingBrokers: prev.pendingBrokers + 1,
+      }));
+      
+      // If we're in the pending brokers tab, refresh that list
+      if (tabValue === 0) {
+        const pendingBrokersRes = await axios.get('/api/admin/pending-brokers', {
+          withCredentials: true,
+        });
+        setPendingBrokers(pendingBrokersRes.data || []);
+      }
+      
+      showSnackbar('Broker approval revoked successfully');
     } catch (error) {
       console.error('Error revoking broker approval:', error);
       showSnackbar('Failed to revoke broker approval', 'error');
@@ -221,9 +274,28 @@ const AdminDashboard = () => {
 
   // Filter pending brokers based on search text
   const filteredBrokers = pendingBrokers.filter(broker => 
-    broker.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
-    broker.email.toLowerCase().includes(searchText.toLowerCase()) ||
+    broker.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
+    broker.email?.toLowerCase().includes(searchText.toLowerCase()) ||
     (broker.licenseNumber && broker.licenseNumber.toLowerCase().includes(searchText.toLowerCase()))
+  );
+  
+  // Filter all brokers based on search text
+  const filteredAllBrokers = allBrokers.filter(broker => 
+    broker.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
+    broker.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+    (broker.licenseNumber && broker.licenseNumber.toLowerCase().includes(searchText.toLowerCase()))
+  );
+  
+  // Filter users based on search text
+  const filteredUsers = allUsers.filter(user => 
+    user.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchText.toLowerCase())
+  );
+  
+  // Filter listings based on search text
+  const filteredListings = listings.filter(listing => 
+    listing.neighborhood?.toLowerCase().includes(searchText.toLowerCase()) ||
+    listing.brokerEmail?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   if (loading) {
@@ -327,7 +399,7 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Pending Broker Approvals */}
+      {/* Pending Broker Approvals Tab */}
       {tabValue === 0 && (
         <Card
           elevation={2}
@@ -466,6 +538,402 @@ const AdminDashboard = () => {
         </Card>
       )}
 
+      {/* All Brokers Tab */}
+      {tabValue === 1 && (
+        <Card
+          elevation={2}
+          sx={{
+            borderRadius: 2,
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
+            border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="text.primary">
+                All Brokers
+              </Typography>
+              
+              {/* Search box */}
+              <Paper
+                component="form"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: 300,
+                  p: '2px 8px',
+                  border: '1px solid',
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  backgroundColor: 'transparent',
+                }}
+              >
+                <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                <TextField
+                  size="small"
+                  placeholder="Search brokers..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  variant="standard"
+                  fullWidth
+                  InputProps={{
+                    disableUnderline: true,
+                  }}
+                />
+              </Paper>
+            </Box>
+
+            {filteredAllBrokers.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  {allBrokers.length === 0
+                    ? "No brokers found"
+                    : "No brokers match your search criteria"}
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} elevation={0}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.03)' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>License #</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredAllBrokers.map((broker) => (
+                      <TableRow 
+                        key={broker._id}
+                        hover
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: isDarkMode ? 'rgba(35, 206, 163, 0.05)' : 'rgba(35, 206, 163, 0.02)',
+                          }
+                        }}
+                      >
+                        <TableCell>{broker.fullName}</TableCell>
+                        <TableCell>{broker.email}</TableCell>
+                        <TableCell>{broker.phone || 'N/A'}</TableCell>
+                        <TableCell>{broker.licenseNumber || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={broker.isApproved ? "Approved" : "Pending"}
+                            size="small"
+                            sx={{
+                              backgroundColor: broker.isApproved
+                                ? (isDarkMode ? 'rgba(46, 204, 113, 0.2)' : 'rgba(46, 204, 113, 0.1)')
+                                : (isDarkMode ? 'rgba(249, 199, 79, 0.2)' : 'rgba(249, 199, 79, 0.1)'),
+                              color: broker.isApproved
+                                ? theme.palette.success.main
+                                : theme.palette.warning.main,
+                              fontWeight: 600,
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                            <Tooltip title="View Details">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleViewDetails(broker)}
+                                sx={{
+                                  color: 'text.secondary',
+                                  '&:hover': {
+                                    color: primaryColor,
+                                  },
+                                }}
+                              >
+                                <VisibilityIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            {broker.isApproved ? (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() => handleRevokeBroker(broker._id)}
+                                sx={{
+                                  borderRadius: 1,
+                                  textTransform: 'none',
+                                  fontSize: '0.8rem',
+                                  px: 2,
+                                }}
+                              >
+                                Revoke
+                              </Button>
+                            ) : (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="primary"
+                                onClick={() => handleApproveBroker(broker._id)}
+                                sx={{
+                                  borderRadius: 1,
+                                  textTransform: 'none',
+                                  fontSize: '0.8rem',
+                                  px: 2,
+                                }}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Users Tab */}
+      {tabValue === 2 && (
+        <Card
+          elevation={2}
+          sx={{
+            borderRadius: 2,
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
+            border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="text.primary">
+                Users
+              </Typography>
+              
+              {/* Search box */}
+              <Paper
+                component="form"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: 300,
+                  p: '2px 8px',
+                  border: '1px solid',
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  backgroundColor: 'transparent',
+                }}
+              >
+                <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                <TextField
+                  size="small"
+                  placeholder="Search users..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  variant="standard"
+                  fullWidth
+                  InputProps={{
+                    disableUnderline: true,
+                  }}
+                />
+              </Paper>
+            </Box>
+
+            {filteredUsers.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  {allUsers.length === 0
+                    ? "No users found"
+                    : "No users match your search criteria"}
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} elevation={0}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.03)' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Saved Listings</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow 
+                        key={user._id}
+                        hover
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: isDarkMode ? 'rgba(35, 206, 163, 0.05)' : 'rgba(35, 206, 163, 0.02)',
+                          }
+                        }}
+                      >
+                        <TableCell>{user.fullName}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Tooltip title={user.createdAt ? dayjs(user.createdAt).format('YYYY-MM-DD HH:mm') : 'Unknown'}>
+                            <span>{user.createdAt ? dayjs(user.createdAt).fromNow() : 'Unknown'}</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>{user.savedApartments ? user.savedApartments.length : 0}</TableCell>
+                        <TableCell align="right">
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => {}} // Future feature: view user details
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': {
+                                  color: primaryColor,
+                                },
+                              }}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Listings Tab */}
+      {tabValue === 3 && (
+        <Card
+          elevation={2}
+          sx={{
+            borderRadius: 2,
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
+            border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="text.primary">
+                Property Listings
+              </Typography>
+              
+              {/* Search box */}
+              <Paper
+                component="form"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: 300,
+                  p: '2px 8px',
+                  border: '1px solid',
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                  borderRadius: 2,
+                  boxShadow: 'none',
+                  backgroundColor: 'transparent',
+                }}
+              >
+                <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                <TextField
+                  size="small"
+                  placeholder="Search listings..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  variant="standard"
+                  fullWidth
+                  InputProps={{
+                    disableUnderline: true,
+                  }}
+                />
+              </Paper>
+            </Box>
+
+            {filteredListings.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  {listings.length === 0
+                    ? "No listings found"
+                    : "No listings match your search criteria"}
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} elevation={0}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.03)' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Property Type</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Neighborhood</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Bedrooms</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Broker</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredListings.map((listing) => (
+                      <TableRow 
+                        key={listing._id}
+                        hover
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: isDarkMode ? 'rgba(35, 206, 163, 0.05)' : 'rgba(35, 206, 163, 0.02)',
+                          }
+                        }}
+                      >
+                        <TableCell>{listing.type || 'N/A'}</TableCell>
+                        <TableCell>{listing.neighborhood || 'N/A'}</TableCell>
+                        <TableCell>{listing.bedrooms || 'N/A'}</TableCell>
+                        <TableCell>
+                          ${typeof listing.price === 'number' 
+                            ? listing.price.toLocaleString() 
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell>{listing.brokerEmail}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={listing.isActive ? "Active" : "Inactive"}
+                            size="small"
+                            sx={{
+                              backgroundColor: listing.isActive
+                                ? (isDarkMode ? 'rgba(46, 204, 113, 0.2)' : 'rgba(46, 204, 113, 0.1)')
+                                : (isDarkMode ? 'rgba(231, 76, 60, 0.2)' : 'rgba(231, 76, 60, 0.1)'),
+                              color: listing.isActive
+                                ? theme.palette.success.main
+                                : theme.palette.error.main,
+                              fontWeight: 600,
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => {}} // Future feature: view listing details
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': {
+                                  color: primaryColor,
+                                },
+                              }}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Broker Details Dialog */}
       <Dialog
         open={detailsOpen}
@@ -503,12 +971,40 @@ const AdminDashboard = () => {
                 <Typography variant="subtitle2" color="text.secondary">License Number</Typography>
                 <Typography variant="body1" gutterBottom>{selectedBroker.licenseNumber || 'Not provided'}</Typography>
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">Company</Typography>
+                <Typography variant="body1" gutterBottom>{selectedBroker.companyName || 'Not provided'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+                <Typography variant="body1" gutterBottom>
+                  <Chip
+                    label={selectedBroker.isApproved ? "Approved" : "Pending"}
+                    size="small"
+                    sx={{
+                      backgroundColor: selectedBroker.isApproved
+                        ? (isDarkMode ? 'rgba(46, 204, 113, 0.2)' : 'rgba(46, 204, 113, 0.1)')
+                        : (isDarkMode ? 'rgba(249, 199, 79, 0.2)' : 'rgba(249, 199, 79, 0.1)'),
+                      color: selectedBroker.isApproved
+                        ? theme.palette.success.main
+                        : theme.palette.warning.main,
+                      fontWeight: 600,
+                    }}
+                  />
+                </Typography>
+              </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle2" color="text.secondary">Registration Date</Typography>
                 <Typography variant="body1" gutterBottom>
                   {selectedBroker.createdAt ? dayjs(selectedBroker.createdAt).format('MMMM D, YYYY') : 'Unknown'}
                 </Typography>
               </Grid>
+              {selectedBroker.bio && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary">Bio</Typography>
+                  <Typography variant="body1" gutterBottom>{selectedBroker.bio}</Typography>
+                </Grid>
+              )}
               {selectedBroker.licenseDocumentUrl && (
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>License Document</Typography>
@@ -538,7 +1034,7 @@ const AdminDashboard = () => {
           >
             Close
           </Button>
-          {selectedBroker && (
+          {selectedBroker && !selectedBroker.isApproved && (
             <Button
               variant="contained"
               color="primary"
@@ -547,6 +1043,18 @@ const AdminDashboard = () => {
               }}
             >
               Approve Broker
+            </Button>
+          )}
+          {selectedBroker && selectedBroker.isApproved && (
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                handleRevokeBroker(selectedBroker._id);
+                setDetailsOpen(false);
+              }}
+            >
+              Revoke Approval
             </Button>
           )}
         </DialogActions>
