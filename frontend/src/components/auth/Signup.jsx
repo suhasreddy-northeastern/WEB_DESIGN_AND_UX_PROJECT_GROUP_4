@@ -20,6 +20,8 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import AnimatedBackground from '../common/theme/AnimatedBackground';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const Signup = () => {
   const [form, setForm] = useState({
     fullName: "",
@@ -124,7 +126,7 @@ const Signup = () => {
     try {
       // Remove confirmPassword before sending to API
       const { confirmPassword, ...formDataToSend } = form;
-      await axios.post("http://localhost:4000/api/user/create", formDataToSend);
+      await axios.post(`${API_BASE_URL}/api/user/create`, formDataToSend);
       setModalOpen(true);
       setTimeout(() => {
         setModalOpen(false);

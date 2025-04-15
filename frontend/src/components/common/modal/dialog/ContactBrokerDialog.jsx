@@ -22,6 +22,7 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import { useSelector } from "react-redux";
 import axios from "axios";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 const ContactBrokerDialog = ({
   open,
   onClose,
@@ -104,7 +105,7 @@ ${currentUser?.fullName || name}`;
     try {
       setLoading(true);
       await axios.post(
-        "http://localhost:4000/api/user/contact-broker",
+        `${API_BASE_URL}/api/user/contact-broker`,
         {
           apartmentId,
           message,

@@ -31,6 +31,8 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const drawerWidth = 250;
 
 const AdminLayout = () => {
@@ -58,7 +60,7 @@ const AdminLayout = () => {
   // Proper logout function matching what works in ProfileMenu
   const handleLogout = async () => {
     try {
-      await axios.post("http://localhost:4000/api/user/logout", {}, { withCredentials: true });
+      await axios.post(`${API_BASE_URL}/api/user/logout`, {}, { withCredentials: true });
       dispatch(logout());
       navigate("/login");
     } catch (error) {

@@ -37,6 +37,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { updateUser } from "../../redux/userSlice";
 import axios from "axios";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const BrokerHome = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -64,7 +66,7 @@ const BrokerHome = () => {
     setRefreshingStatus(true);
     try {
       // Get updated user data directly from the API
-      const response = await axios.get("http://localhost:4000/api/broker/me", {
+      const response = await axios.get(`${API_BASE_URL}/api/broker/me`, {
         withCredentials: true,
       });
 
@@ -91,14 +93,14 @@ const BrokerHome = () => {
       try {
         // Always fetch broker stats, regardless of current isApproved state
         const statsRes = await axios.get(
-          "http://localhost:4000/api/broker/stats",
+          `${API_BASE_URL}/api/broker/stats`,
           {
             withCredentials: true,
           }
         );
 
         const inquiriesRes = await axios.get(
-          "http://localhost:4000/api/broker/inquiries",
+          `${API_BASE_URL}/api/broker/inquiries`,
           {
             withCredentials: true,
           }

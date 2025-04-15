@@ -25,6 +25,8 @@ import InfoIcon from "@mui/icons-material/Info";
 import CloseIcon from "@mui/icons-material/Close";
 import IconButton from "@mui/material/IconButton";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 // Form step labels
 const steps = ["Basic Info", "Location", "Budget & Features", "Amenities"];
 
@@ -107,7 +109,7 @@ const PreferenceForm = () => {
     const fetchPreferences = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:4000/api/user/preferences/latest",
+          `${API_BASE_URL}/api/user/preferences/latest`,
           { withCredentials: true }
         );
         
@@ -246,7 +248,7 @@ const PreferenceForm = () => {
     
     try {
       const response = await axios.post(
-        "http://localhost:4000/api/user/preferences",
+        `${API_BASE_URL}/api/user/preferences`,
         formData,
         { withCredentials: true }
       );

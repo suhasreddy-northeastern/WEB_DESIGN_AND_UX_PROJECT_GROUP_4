@@ -26,6 +26,7 @@ import ProfileMenu from "../common/ProfileMenu";
 import { useColorMode } from "../common/theme/ColorModeContext";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 const Navbar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
@@ -54,7 +55,7 @@ const Navbar = () => {
   const goToRecommendations = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:4000/api/user/preferences/latest",
+        `${API_BASE_URL}/api/user/preferences/latest`,
         {
           withCredentials: true,
         }
@@ -538,7 +539,7 @@ const Navbar = () => {
                         onClick={async () => {
                           try {
                             await axios.post(
-                              "http://localhost:4000/api/user/logout",
+                              `${API_BASE_URL}/api/user/logout`,
                               {},
                               { withCredentials: true }
                             );

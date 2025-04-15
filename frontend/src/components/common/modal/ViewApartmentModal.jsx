@@ -35,6 +35,8 @@ import ContactBrokerDialog from "./dialog/ContactBrokerDialog";
 import ScheduleTourDialog from "./dialog/ScheduleTourDialog";
 import { loadGoogleMapsApi } from "../../map/GoogleMapsLoader"; 
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const ViewApartmentModal = ({ open, onClose, apartment }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [activeImage, setActiveImage] = useState(0);
@@ -62,7 +64,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
       if (!apartment || !open) return;
 
       try {
-        const res = await axios.get("http://localhost:4000/api/user/saved", {
+        const res = await axios.get(`${API_BASE_URL}/api/user/saved`, {
           withCredentials: true,
         });
 
@@ -98,7 +100,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
       try {
         // This would be an actual API call
         // Using existing apartments endpoint for demo purposes
-        const res = await axios.get("http://localhost:4000/api/apartments", {
+        const res = await axios.get(`${API_BASE_URL}/api/apartments`, {
           withCredentials: true,
         });
 
@@ -125,7 +127,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
       try {
         // In a real app, this would be a dedicated API endpoint
         // For demo purposes, we'll simulate it
-        const res = await axios.get(`http://localhost:4000/api/broker/${apartment.broker}`, {
+        const res = await axios.get(`${API_BASE_URL}/api/broker/${apartment.broker}`, {
           withCredentials: true,
         });
 
@@ -369,7 +371,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
   const handleSaveToggle = async () => {
     try {
       await axios.post(
-        "http://localhost:4000/api/user/save",
+        `${API_BASE_URL}/api/user/save`,
         { apartmentId: apartment._id },
         { withCredentials: true }
       );
@@ -443,7 +445,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
                       height: "100%",
                       objectFit: "cover",
                     }}
-                    image={`http://localhost:4000${
+                    image={`${API_BASE_URL}${
                       gallery[activeImage] || "/images/no-image.png"
                     }`}
                     alt="Apartment image"
@@ -529,7 +531,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
                     >
                       <CardMedia
                         component="img"
-                        image={`http://localhost:4000${img}`}
+                        image={`${API_BASE_URL}${img}`}
                         alt={`Thumbnail ${index + 1}`}
                         sx={{ width: "100%", height: "100%", objectFit: "cover" }}
                       />
@@ -698,7 +700,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
                           >
                             <CardMedia
                               component="img"
-                              image={`http://localhost:4000${
+                              image={`${API_BASE_URL}${
                                 prop.imageUrls?.[0] ||
                                 prop.imageUrl ||
                                 "/images/no-image.png"
@@ -949,7 +951,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
         brokerName={brokerInfo?.fullName || "the broker"}
         brokerEmail={brokerInfo?.email}
         brokerPhone={brokerInfo?.phone}
-        brokerImage={brokerInfo?.imagePath ? `http://localhost:4000${brokerInfo.imagePath}` : null}
+        brokerImage={brokerInfo?.imagePath ? `${API_BASE_URL}${brokerInfo.imagePath}` : null}
         brokerCompany={brokerInfo?.company}
         apartmentDetails={apartment}
       />
@@ -960,7 +962,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
         onClose={() => setOpenTourDialog(false)}
         apartmentId={apartment._id}
         brokerName={brokerInfo?.fullName || "the broker"}
-        brokerImage={brokerInfo?.imagePath ? `http://localhost:4000${brokerInfo.imagePath}` : null}
+        brokerImage={brokerInfo?.imagePath ? `${API_BASE_URL}${brokerInfo.imagePath}` : null}
         apartmentName={`${apartment.bedrooms} BHK in ${apartment.neighborhood}`}
       />
     </>

@@ -20,10 +20,12 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import EventIcon from '@mui/icons-material/Event'; // Added for Tours
+import EventIcon from '@mui/icons-material/Event'; 
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import { logout } from '../../redux/userSlice'; // Adjust import path as needed
+import { logout } from '../../redux/userSlice'; 
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const BrokerSidebar = () => {
   const theme = useTheme();
@@ -35,7 +37,7 @@ const BrokerSidebar = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:4000/api/user/logout', {}, { withCredentials: true });
+      await axios.post(`${API_BASE_URL}/api/user/logout`, {}, { withCredentials: true });
       dispatch(logout());
       navigate('/login');
     } catch (error) {

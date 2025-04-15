@@ -49,6 +49,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import dayjs from 'dayjs';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 // Simple date picker component that doesn't use MUI date pickers
 const SimpleDatePicker = ({ value, onChange, disablePast, label }) => {
   const today = new Date();
@@ -120,7 +122,7 @@ const BrokerTours = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          'http://localhost:4000/api/tours/broker', 
+          `${API_BASE_URL}/api/tours/broker`, 
           { withCredentials: true }
         );
         
@@ -232,7 +234,7 @@ const BrokerTours = () => {
       
       // Submit response
       await axios.put(
-        `http://localhost:4000/api/tours/status/${selectedTour._id}`,
+        `${API_BASE_URL}/api/tours/status/${selectedTour._id}`,
         requestBody,
         { withCredentials: true }
       );
@@ -413,7 +415,7 @@ const BrokerTours = () => {
                           objectFit: 'cover',
                           mr: 2
                         }}
-                        src={`http://localhost:4000${tour.apartmentDetails.imageUrl || '/images/no-image.png'}`}
+                        src={`${API_BASE_URL}${tour.apartmentDetails.imageUrl || '/images/no-image.png'}`}
                         alt=""
                       />
                       <Box>
@@ -434,7 +436,7 @@ const BrokerTours = () => {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Avatar 
-                        src={tour.userDetails.imagePath ? `http://localhost:4000${tour.userDetails.imagePath}` : null}
+                        src={tour.userDetails.imagePath ? `${API_BASE_URL}${tour.userDetails.imagePath}` : null}
                         sx={{ mr: 1, bgcolor: theme.palette.primary.main }}
                       >
                         <PersonIcon />
@@ -539,7 +541,7 @@ const BrokerTours = () => {
                       objectFit: 'cover',
                       mr: 2
                     }}
-                    src={`http://localhost:4000${selectedTour.apartmentDetails.imageUrl || '/images/no-image.png'}`}
+                    src={`${API_BASE_URL}${selectedTour.apartmentDetails.imageUrl || '/images/no-image.png'}`}
                     alt=""
                   />
                   <Box>
@@ -559,7 +561,7 @@ const BrokerTours = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <Avatar 
-                    src={selectedTour.userDetails.imagePath ? `http://localhost:4000${selectedTour.userDetails.imagePath}` : null}
+                    src={selectedTour.userDetails.imagePath ? `${API_BASE_URL}${selectedTour.userDetails.imagePath}` : null}
                     sx={{ mr: 1, bgcolor: theme.palette.primary.main }}
                   >
                     <PersonIcon />

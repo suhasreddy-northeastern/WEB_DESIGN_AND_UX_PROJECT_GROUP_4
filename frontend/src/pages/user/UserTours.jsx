@@ -34,6 +34,8 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 // Extend dayjs with relative time plugin
 dayjs.extend(relativeTime);
 
@@ -56,7 +58,7 @@ const UserTours = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          'http://localhost:4000/api/tours/user',
+          `${API_BASE_URL}/api/tours/user`,
           { withCredentials: true }
         );
         
@@ -141,7 +143,7 @@ const UserTours = () => {
     try {
       setCancelLoading(true);
       await axios.put(
-        `http://localhost:4000/api/tours/cancel/${selectedTourId}`,
+        `${API_BASE_URL}/api/tours/cancel/${selectedTourId}`,
         { 
           cancelReason 
         },
@@ -247,7 +249,7 @@ const UserTours = () => {
                       height: '100%',
                       objectFit: 'cover'
                     }}
-                    image={`http://localhost:4000${tour.apartmentDetails.imageUrl || '/images/no-image.png'}`}
+                    image={`${API_BASE_URL}${tour.apartmentDetails.imageUrl || '/images/no-image.png'}`}
                     alt={`${tour.apartmentDetails.bedrooms} BHK in ${tour.apartmentDetails.neighborhood}`}
                   />
                 </Box>

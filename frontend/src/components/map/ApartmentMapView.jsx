@@ -9,6 +9,8 @@ import HomeIcon from '@mui/icons-material/Home';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import LayersIcon from '@mui/icons-material/Layers';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 // Predefined marker URLs to avoid direct use of google object
 const MARKER_ICONS = {
   green: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
@@ -84,7 +86,7 @@ const ApartmentMapView = ({ userLocation = null, initialCenter = { lat: 40.7128,
         // If user location is provided, get nearby apartments
         let response;
         if (userLocation && userLocation.lat && userLocation.lng) {
-          response = await axios.get(`http://localhost:4000/api/apartments/nearby`, {
+          response = await axios.get(`${API_BASE_URL}/api/apartments/nearby`, {
             params: {
               latitude: userLocation.lat,
               longitude: userLocation.lng,
@@ -96,7 +98,7 @@ const ApartmentMapView = ({ userLocation = null, initialCenter = { lat: 40.7128,
           setCenter({ lat: userLocation.lat, lng: userLocation.lng });
         } else {
           // Otherwise get all apartments
-          response = await axios.get('http://localhost:4000/api/apartments');
+          response = await axios.get(`${API_BASE_URL}/api/apartments`);
         }
         
         setApartments(response.data);
