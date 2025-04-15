@@ -14,13 +14,15 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEmployees = async () => {
     try {
-      const res = await axios.get('http://localhost:4000/user/users', {
+      const res = await axios.get(`${API_BASE_URL}/user/users`, {
         withCredentials: true
       });
   

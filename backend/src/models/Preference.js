@@ -18,6 +18,18 @@ const preferenceSchema = new mongoose.Schema({
   view: String,
   leaseCapacity: String,
   roommates: String,
+  // Add location preference
+  locationPreference: {
+    center: {
+      type: [Number], // [longitude, latitude]
+      default: null
+    },
+    radius: {
+      type: Number, // in kilometers
+      default: 5
+    },
+    address: String
+  },
   submittedAt: { type: Date, default: Date.now }
 });
 

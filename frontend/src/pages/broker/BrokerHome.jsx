@@ -19,8 +19,9 @@ import {
   ListItemIcon,
   Alert,
   AlertTitle,
-  Snackbar
+  Snackbar,
 } from "@mui/material";
+import EventIcon from '@mui/icons-material/Event';
 import { Link, useNavigate } from "react-router-dom";
 import ApartmentIcon from "@mui/icons-material/Apartment";
 import AddIcon from "@mui/icons-material/Add";
@@ -36,25 +37,27 @@ import { useSelector, useDispatch } from "react-redux";
 import { updateUser } from "../../redux/userSlice";
 import axios from "axios";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const BrokerHome = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user.user);
-  const isDarkMode = theme.palette.mode === 'dark';
+  const isDarkMode = theme.palette.mode === "dark";
   const [loading, setLoading] = useState(true);
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [stats, setStats] = useState({
     activeListings: 0,
     pendingApproval: 0,
     inquiries: 0,
-    viewsThisWeek: 0
+    viewsThisWeek: 0,
   });
   const [recentInquiries, setRecentInquiries] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
-  
+
   // Check broker approval status explicitly
   const isApproved = user && user.isApproved === true;
 
@@ -63,13 +66,13 @@ const BrokerHome = () => {
     setRefreshingStatus(true);
     try {
       // Get updated user data directly from the API
-      const response = await axios.get('http://localhost:4000/api/broker/me', {
+      const response = await axios.get(`${API_BASE_URL}/api/broker/me`, {
         withCredentials: true,
       });
-      
+
       // Update Redux store with the fresh data
       dispatch(updateUser(response.data));
-      
+
       setSnackbarMessage("Status updated successfully");
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
@@ -85,79 +88,53 @@ const BrokerHome = () => {
 
   useEffect(() => {
     const fetchBrokerData = async () => {
+      setLoading(true);
+
       try {
-        setLoading(true);
-        
-        if (isApproved) {
-          // For approved brokers, fetch actual data from API
-          try {
-            // In a real implementation, fetch real data from your API
-            // This would be replaced with actual API calls
-            const response = await axios.get('http://localhost:4000/api/broker/stats', {
-              withCredentials: true,
-            });
-            
-            // Use the real data from API if available
-            if (response && response.data) {
-              setStats(response.data);
-            } else {
-              // Set zeros if no data is returned
-              setStats({
-                activeListings: 0,
-                pendingApproval: 0,
-                inquiries: 0,
-                viewsThisWeek: 0
-              });
-            }
-            
-            // Fetch inquiries
-            const inquiriesResponse = await axios.get('http://localhost:4000/api/broker/inquiries', {
-              withCredentials: true,
-            });
-            
-            if (inquiriesResponse && inquiriesResponse.data && inquiriesResponse.data.inquiries) {
-              setRecentInquiries(inquiriesResponse.data.inquiries);
-            } else {
-              setRecentInquiries([]);
-            }
-          } catch (apiError) {
-            console.error('Error fetching broker api data:', apiError);
-            // Set zeros on API error
-            setStats({
-              activeListings: 0,
-              pendingApproval: 0,
-              inquiries: 0,
-              viewsThisWeek: 0
-            });
-            setRecentInquiries([]);
+        // Always fetch broker stats, regardless of current isApproved state
+        const statsRes = await axios.get(
+          `${API_BASE_URL}/api/broker/stats`,
+          {
+            withCredentials: true,
           }
-        } else {
-          // For pending brokers, show zeros
-          setStats({
+        );
+
+        const inquiriesRes = await axios.get(
+          `${API_BASE_URL}/api/broker/inquiries`,
+          {
+            withCredentials: true,
+          }
+        );
+
+        setStats(
+          statsRes?.data || {
             activeListings: 0,
             pendingApproval: 0,
             inquiries: 0,
-            viewsThisWeek: 0
-          });
-          
-          setRecentInquiries([]);
-        }
+            viewsThisWeek: 0,
+          }
+        );
+
+        setRecentInquiries(inquiriesRes?.data?.inquiries || []);
       } catch (error) {
-        console.error('Error fetching broker data:', error);
-        // Set zeros on any error
+        console.error("Error fetching broker dashboard data:", error);
+
+        // Set fallback defaults
         setStats({
           activeListings: 0,
           pendingApproval: 0,
           inquiries: 0,
-          viewsThisWeek: 0
+          viewsThisWeek: 0,
         });
+
+        setRecentInquiries([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchBrokerData();
-  }, [isApproved]);
+  }, []);
 
   // Log user data for debugging
   useEffect(() => {
@@ -167,7 +144,14 @@ const BrokerHome = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "80vh",
+        }}
+      >
         <CircularProgress sx={{ color: theme.palette.primary.main }} />
       </Box>
     );
@@ -181,54 +165,64 @@ const BrokerHome = () => {
           open={snackbarOpen}
           autoHideDuration={5000}
           onClose={() => setSnackbarOpen(false)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
         >
-          <Alert 
-            onClose={() => setSnackbarOpen(false)} 
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
             severity={snackbarSeverity}
-            sx={{ width: '100%' }}
+            sx={{ width: "100%" }}
           >
             {snackbarMessage}
           </Alert>
         </Snackbar>
-        
+
         {/* Header section */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" fontWeight="bold" sx={{ mb: 1 }}>
-            Welcome, {user?.fullName || 'Broker'}
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight="bold"
+            sx={{ mb: 1 }}
+          >
+            Welcome, {user?.fullName || "Broker"}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Manage your property listings and inquiries from potential tenants.
           </Typography>
         </Box>
-        
+
         {/* Approval Status Alert - Show this only if the broker is not approved */}
         {!isApproved && (
-          <Alert 
-            severity="warning" 
-            variant="filled" 
-            sx={{ 
-              mb: 4, 
+          <Alert
+            severity="warning"
+            variant="filled"
+            sx={{
+              mb: 4,
               borderRadius: 2,
-              '& .MuiAlert-icon': {
-                alignItems: 'center'
-              }
+              "& .MuiAlert-icon": {
+                alignItems: "center",
+              },
             }}
             action={
-              <Button 
+              <Button
                 color="inherit"
                 size="small"
                 onClick={refreshApprovalStatus}
                 disabled={refreshingStatus}
-                startIcon={refreshingStatus && <CircularProgress size={16} color="inherit" />}
+                startIcon={
+                  refreshingStatus && (
+                    <CircularProgress size={16} color="inherit" />
+                  )
+                }
               >
-                {refreshingStatus ? 'Checking...' : 'Refresh Status'}
+                {refreshingStatus ? "Checking..." : "Refresh Status"}
               </Button>
             }
           >
             <AlertTitle>Pending Approval</AlertTitle>
-            Your broker account is currently pending approval from an administrator. 
-            You'll be able to create and manage property listings once approved.
+            Your broker account is currently pending approval from an
+            administrator. You'll be able to create and manage property listings
+            once approved.
           </Alert>
         )}
 
@@ -236,18 +230,24 @@ const BrokerHome = () => {
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {/* Active Listings Card */}
           <Grid item xs={12} sm={6} lg={3}>
-            <Card 
+            <Card
               elevation={2}
               sx={{
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                height: '100%',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
+                height: "100%",
               }}
             >
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <ApartmentIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <ApartmentIcon
+                    sx={{ color: theme.palette.primary.main, mr: 1 }}
+                  />
                   <Typography variant="subtitle1" fontWeight={600}>
                     Active Listings
                   </Typography>
@@ -255,10 +255,10 @@ const BrokerHome = () => {
                 <Typography variant="h3" fontWeight={700} sx={{ mb: 1 }}>
                   {stats.activeListings}
                 </Typography>
-                <Button 
-                  component={Link} 
-                  to="/broker/listings" 
-                  variant="text" 
+                <Button
+                  component={Link}
+                  to="/broker/listings"
+                  variant="text"
                   size="small"
                   color="primary"
                 >
@@ -267,22 +267,78 @@ const BrokerHome = () => {
               </CardContent>
             </Card>
           </Grid>
-
-          {/* Pending Approval Card */}
           <Grid item xs={12} sm={6} lg={3}>
-            <Card 
+            <Card
               elevation={2}
               sx={{
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                height: '100%',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
+                height: "100%",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {stats.pendingTours > 0 && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "4px",
+                    bgcolor: theme.palette.info.main,
+                  }}
+                />
+              )}
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <EventIcon sx={{ color: theme.palette.info.main, mr: 1 }} />
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Tour Requests
+                  </Typography>
+                </Box>
+                <Typography variant="h3" fontWeight={700} sx={{ mb: 1 }}>
+                  {stats.pendingTours || 0}
+                </Typography>
+                <Button
+                  component={Link}
+                  to="/broker/tours"
+                  variant="text"
+                  size="small"
+                  color="primary"
+                >
+                  Manage Tours
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Pending Approval Card */}
+          <Grid item xs={12} sm={6} lg={3}>
+            <Card
+              elevation={2}
+              sx={{
+                borderRadius: 2,
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
+                height: "100%",
               }}
             >
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <CancelIcon sx={{ color: theme.palette.warning.main, mr: 1 }} />
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <CancelIcon
+                      sx={{ color: theme.palette.warning.main, mr: 1 }}
+                    />
                     <Typography variant="subtitle1" fontWeight={600}>
                       Pending Approval
                     </Typography>
@@ -291,10 +347,10 @@ const BrokerHome = () => {
                 <Typography variant="h3" fontWeight={700} sx={{ mb: 1 }}>
                   {stats.pendingApproval}
                 </Typography>
-                <Button 
-                  component={Link} 
-                  to="/broker/listings?filter=pending" 
-                  variant="text" 
+                <Button
+                  component={Link}
+                  to="/broker/listings?filter=pending"
+                  variant="text"
                   size="small"
                   color="primary"
                 >
@@ -306,32 +362,38 @@ const BrokerHome = () => {
 
           {/* Inquiries Card */}
           <Grid item xs={12} sm={6} lg={3}>
-            <Card 
+            <Card
               elevation={2}
               sx={{
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                height: '100%',
-                position: 'relative',
-                overflow: 'hidden',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
+                height: "100%",
+                position: "relative",
+                overflow: "hidden",
               }}
             >
               {stats.inquiries > 0 && (
-                <Box 
-                  sx={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    width: '100%', 
-                    height: '4px', 
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "4px",
                     bgcolor: theme.palette.primary.main,
-                  }} 
+                  }}
                 />
               )}
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <MessageIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <MessageIcon
+                    sx={{ color: theme.palette.primary.main, mr: 1 }}
+                  />
                   <Typography variant="subtitle1" fontWeight={600}>
                     New Inquiries
                   </Typography>
@@ -339,10 +401,10 @@ const BrokerHome = () => {
                 <Typography variant="h3" fontWeight={700} sx={{ mb: 1 }}>
                   {stats.inquiries}
                 </Typography>
-                <Button 
-                  component={Link} 
-                  to="/broker/inquiries" 
-                  variant="text" 
+                <Button
+                  component={Link}
+                  to="/broker/inquiries"
+                  variant="text"
                   size="small"
                   color="primary"
                 >
@@ -354,18 +416,24 @@ const BrokerHome = () => {
 
           {/* Weekly Views Card */}
           <Grid item xs={12} sm={6} lg={3}>
-            <Card 
+            <Card
               elevation={2}
               sx={{
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                height: '100%',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
+                height: "100%",
               }}
             >
               <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <VisibilityIcon sx={{ color: theme.palette.info.main, mr: 1 }} />
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                  <VisibilityIcon
+                    sx={{ color: theme.palette.info.main, mr: 1 }}
+                  />
                   <Typography variant="subtitle1" fontWeight={600}>
                     Weekly Views
                   </Typography>
@@ -373,10 +441,10 @@ const BrokerHome = () => {
                 <Typography variant="h3" fontWeight={700} sx={{ mb: 1 }}>
                   {stats.viewsThisWeek}
                 </Typography>
-                <Button 
-                  component={Link} 
-                  to="/broker/analytics" 
-                  variant="text" 
+                <Button
+                  component={Link}
+                  to="/broker/analytics"
+                  variant="text"
                   size="small"
                   color="primary"
                 >
@@ -391,20 +459,24 @@ const BrokerHome = () => {
         <Grid container spacing={3}>
           {/* Left Side - Recent Inquiries */}
           <Grid item xs={12} md={7}>
-            <Paper 
+            <Paper
               elevation={2}
               sx={{
                 p: 3,
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
               }}
             >
               <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
                 Recent Inquiries
               </Typography>
               {recentInquiries.length > 0 ? (
-                <List sx={{ width: '100%' }}>
+                <List sx={{ width: "100%" }}>
                   {recentInquiries.map((inquiry) => (
                     <React.Fragment key={inquiry.id}>
                       <ListItem alignItems="flex-start">
@@ -415,18 +487,24 @@ const BrokerHome = () => {
                         </ListItemIcon>
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
                               <Typography variant="subtitle1" fontWeight={600}>
                                 {inquiry.name}
                               </Typography>
-                              <Chip 
-                                size="small" 
-                                label="New" 
-                                sx={{ 
-                                  bgcolor: theme.palette.primary.main, 
-                                  color: 'white',
-                                  height: 24
-                                }} 
+                              <Chip
+                                size="small"
+                                label="New"
+                                sx={{
+                                  bgcolor: theme.palette.primary.main,
+                                  color: "white",
+                                  height: 24,
+                                }}
                               />
                             </Box>
                           }
@@ -436,7 +514,7 @@ const BrokerHome = () => {
                                 component="span"
                                 variant="body2"
                                 color="text.primary"
-                                sx={{ display: 'block', mt: 0.5 }}
+                                sx={{ display: "block", mt: 0.5 }}
                               >
                                 {inquiry.property}
                               </Typography>
@@ -444,7 +522,7 @@ const BrokerHome = () => {
                                 component="span"
                                 variant="body2"
                                 color="text.secondary"
-                                sx={{ display: 'block', mt: 0.5 }}
+                                sx={{ display: "block", mt: 0.5 }}
                               >
                                 {inquiry.message}
                               </Typography>
@@ -452,7 +530,7 @@ const BrokerHome = () => {
                                 component="span"
                                 variant="caption"
                                 color="text.secondary"
-                                sx={{ display: 'block', mt: 1 }}
+                                sx={{ display: "block", mt: 1 }}
                               >
                                 {new Date(inquiry.date).toLocaleString()}
                               </Typography>
@@ -460,17 +538,23 @@ const BrokerHome = () => {
                           }
                         />
                       </ListItem>
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                        <Button 
-                          size="small" 
-                          variant="outlined" 
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          mb: 1,
+                        }}
+                      >
+                        <Button
+                          size="small"
+                          variant="outlined"
                           sx={{ mr: 1, borderRadius: 1 }}
                         >
                           Reply
                         </Button>
-                        <Button 
-                          size="small" 
-                          variant="contained" 
+                        <Button
+                          size="small"
+                          variant="contained"
                           color="primary"
                           sx={{ borderRadius: 1 }}
                         >
@@ -482,19 +566,18 @@ const BrokerHome = () => {
                   ))}
                 </List>
               ) : (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
                   <Typography variant="body1" color="text.secondary">
-                    {isApproved 
-                      ? "No recent inquiries" 
-                      : "Inquiries will appear here after your account is approved"
-                    }
+                    {isApproved
+                      ? "No recent inquiries"
+                      : "Inquiries will appear here after your account is approved"}
                   </Typography>
                 </Box>
               )}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button 
-                  component={Link} 
-                  to="/broker/inquiries" 
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Button
+                  component={Link}
+                  to="/broker/inquiries"
                   variant="contained"
                   color="primary"
                   sx={{ borderRadius: 6 }}
@@ -508,20 +591,24 @@ const BrokerHome = () => {
 
           {/* Right Side - Quick Actions */}
           <Grid item xs={12} md={5}>
-            <Paper 
+            <Paper
               elevation={2}
               sx={{
                 p: 3,
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
                 mb: 3,
               }}
             >
               <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
                 Quick Actions
               </Typography>
-              
+
               <Button
                 fullWidth
                 variant="contained"
@@ -531,16 +618,16 @@ const BrokerHome = () => {
                 to="/broker/listings/new"
                 startIcon={<AddIcon />}
                 disabled={!isApproved}
-                sx={{ 
+                sx={{
                   py: 1.5,
                   mb: 2,
                   borderRadius: 2,
-                  justifyContent: 'flex-start',
+                  justifyContent: "flex-start",
                 }}
               >
                 Create New Listing
               </Button>
-              
+
               <Button
                 fullWidth
                 variant="outlined"
@@ -549,16 +636,16 @@ const BrokerHome = () => {
                 component={Link}
                 to="/broker/listings"
                 startIcon={<ApartmentIcon />}
-                sx={{ 
+                sx={{
                   py: 1.5,
                   mb: 2,
                   borderRadius: 2,
-                  justifyContent: 'flex-start',
+                  justifyContent: "flex-start",
                 }}
               >
                 Manage Listings
               </Button>
-              
+
               <Button
                 fullWidth
                 variant="outlined"
@@ -568,14 +655,32 @@ const BrokerHome = () => {
                 to="/broker/inquiries"
                 startIcon={<MessageIcon />}
                 disabled={!isApproved}
-                sx={{ 
+                sx={{
                   py: 1.5,
                   mb: 2,
                   borderRadius: 2,
-                  justifyContent: 'flex-start',
+                  justifyContent: "flex-start",
                 }}
               >
                 View Inquiries
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="primary"
+                size="large"
+                component={Link}
+                to="/broker/tours"
+                startIcon={<EventIcon />}
+                disabled={!isApproved}
+                sx={{
+                  py: 1.5,
+                  mb: 2,
+                  borderRadius: 2,
+                  justifyContent: "flex-start",
+                }}
+              >
+                Manage Tours
               </Button>
 
               <Button
@@ -587,10 +692,10 @@ const BrokerHome = () => {
                 to="/broker/analytics"
                 startIcon={<StarIcon />}
                 disabled={!isApproved}
-                sx={{ 
+                sx={{
                   py: 1.5,
                   borderRadius: 2,
-                  justifyContent: 'flex-start',
+                  justifyContent: "flex-start",
                 }}
               >
                 Analytics Dashboard
@@ -598,65 +703,89 @@ const BrokerHome = () => {
             </Paper>
 
             {/* Account Status */}
-            <Paper 
+            <Paper
               elevation={2}
               sx={{
                 p: 3,
                 borderRadius: 2,
-                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#fff',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#fff",
+                border: isDarkMode
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "none",
               }}
             >
               <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
                 Account Status
               </Typography>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 {isApproved ? (
                   <Chip
                     icon={<CheckCircleIcon />}
                     label="Approved"
-                    sx={{ 
+                    sx={{
                       fontWeight: 600,
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.1)',
-                      color: theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32',
-                      border: '1px solid',
-                      borderColor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.5)' : 'rgba(46, 125, 50, 0.3)',
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.2)"
+                          : "rgba(46, 125, 50, 0.1)",
+                      color:
+                        theme.palette.mode === "dark" ? "#81c784" : "#2e7d32",
+                      border: "1px solid",
+                      borderColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.5)"
+                          : "rgba(46, 125, 50, 0.3)",
                     }}
                   />
                 ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Chip
                       icon={<CancelIcon />}
                       label="Pending Approval"
-                      sx={{ 
+                      sx={{
                         fontWeight: 600,
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(237, 108, 2, 0.2)' : 'rgba(237, 108, 2, 0.1)',
-                        color: theme.palette.mode === 'dark' ? '#ffb74d' : '#ed6c02',
-                        border: '1px solid',
-                        borderColor: theme.palette.mode === 'dark' ? 'rgba(237, 108, 2, 0.5)' : 'rgba(237, 108, 2, 0.3)',
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(237, 108, 2, 0.2)"
+                            : "rgba(237, 108, 2, 0.1)",
+                        color:
+                          theme.palette.mode === "dark" ? "#ffb74d" : "#ed6c02",
+                        border: "1px solid",
+                        borderColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(237, 108, 2, 0.5)"
+                            : "rgba(237, 108, 2, 0.3)",
                       }}
                     />
                     <Button
                       variant="outlined"
                       size="small"
                       color="primary"
-                      startIcon={refreshingStatus ? <CircularProgress size={16} /> : <RefreshIcon />}
+                      startIcon={
+                        refreshingStatus ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <RefreshIcon />
+                        )
+                      }
                       onClick={refreshApprovalStatus}
                       disabled={refreshingStatus}
                     >
-                      {refreshingStatus ? 'Checking...' : 'Check Status'}
+                      {refreshingStatus ? "Checking..." : "Check Status"}
                     </Button>
                   </Box>
                 )}
               </Box>
-              
+
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {isApproved 
+                {isApproved
                   ? "Your broker account is approved. You can create and manage property listings."
                   : "Your broker account is pending approval. You'll be notified once an administrator reviews your application."}
               </Typography>
-              
+
               <Button
                 variant="text"
                 color="primary"

@@ -19,10 +19,13 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
-import BarChartIcon from '@mui/icons-material/BarChart'; // Added for Analytics
+import BarChartIcon from '@mui/icons-material/BarChart';
+import EventIcon from '@mui/icons-material/Event'; 
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import { logout } from '../../redux/userSlice'; // Adjust import path as needed
+import { logout } from '../../redux/userSlice'; 
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const BrokerSidebar = () => {
   const theme = useTheme();
@@ -34,7 +37,7 @@ const BrokerSidebar = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:4000/api/user/logout', {}, { withCredentials: true });
+      await axios.post(`${API_BASE_URL}/api/user/logout`, {}, { withCredentials: true });
       dispatch(logout());
       navigate('/login');
     } catch (error) {
@@ -47,7 +50,8 @@ const BrokerSidebar = () => {
     { name: 'Dashboard', icon: <DashboardIcon />, path: '/broker/dashboard' },
     { name: 'My Listings', icon: <ListAltIcon />, path: '/broker/listings' },
     { name: 'Inquiries', icon: <QuestionAnswerIcon />, path: '/broker/inquiries' },
-    { name: 'Analytics', icon: <BarChartIcon />, path: '/broker/analytics' }, // Added Analytics
+    { name: 'Tours', icon: <EventIcon />, path: '/broker/tours' }, // Added Tours
+    { name: 'Analytics', icon: <BarChartIcon />, path: '/broker/analytics' },
     { name: 'Add Listing', icon: <AddCircleOutlineIcon />, path: '/broker/add-listing' },
     { name: 'Profile', icon: <PersonIcon />, path: '/broker/profile' },
     { name: 'Settings', icon: <SettingsIcon />, path: '/broker/settings' },
@@ -60,9 +64,9 @@ const BrokerSidebar = () => {
     return location.pathname === path;
   };
 
-  // Group menu items by category (now with Analytics in main menu)
-  const mainMenuItems = menuItems.slice(0, 6);
-  const accountMenuItems = menuItems.slice(6);
+  // Group menu items by category (now with Tours in main menu)
+  const mainMenuItems = menuItems.slice(0, 7);
+  const accountMenuItems = menuItems.slice(7);
 
   return (
     <Paper
@@ -100,11 +104,10 @@ const BrokerSidebar = () => {
         <List sx={{ p: 0 }}>
           {mainMenuItems.map((item) => (
             <ListItem
-              button
-              component={Link}
-              to={item.path}
-              key={item.name}
-              sx={{
+            component={Link}
+            to={item.path}
+            key={item.name}
+            sx={{
                 mb: 0.5,
                 borderRadius: 1.5,
                 backgroundColor: isActive(item.path)
@@ -160,7 +163,6 @@ const BrokerSidebar = () => {
         <List sx={{ p: 0 }}>
           {accountMenuItems.map((item) => (
             <ListItem
-              button
               component={Link}
               to={item.path}
               key={item.name}
@@ -204,14 +206,14 @@ const BrokerSidebar = () => {
             </ListItem>
           ))}
           
-          {/* Logout Button */}
+          {/* Logout Button - Fixed by removing the 'button' attribute */}
           <ListItem
-            button
             onClick={handleLogout}
             sx={{
               mb: 0.5,
               borderRadius: 1.5,
               color: theme.palette.error.main,
+              cursor: 'pointer',
               '&:hover': {
                 backgroundColor: isDarkMode
                   ? 'rgba(239, 83, 80, 0.1)'

@@ -19,9 +19,30 @@ const apartmentSchema = new mongoose.Schema({
   leaseCapacity: String,
   roommates: String,
   imageUrls: [String],
+  // Add location data
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0]
+    },
+    address: {
+      type: String,
+      default: ''
+    }
+  },
   // Add broker fields
   brokerEmail: {
     type: String,
+    required: true
+  },
+  broker: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', // Make sure your User model is named 'User'
     required: true
   },
   isActive: {
@@ -38,5 +59,8 @@ const apartmentSchema = new mongoose.Schema({
     default: Date.now 
   }
 });
+
+// Add a 2dsphere index for geospatial queries
+apartmentSchema.index({ "location.coordinates": "2dsphere" });
 
 module.exports = mongoose.model('Apartment', apartmentSchema);

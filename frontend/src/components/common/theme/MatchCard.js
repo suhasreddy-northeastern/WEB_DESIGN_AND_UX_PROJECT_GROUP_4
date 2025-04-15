@@ -15,7 +15,6 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import axios from "axios";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -27,6 +26,8 @@ import LightbulbIcon from "@mui/icons-material/Lightbulb";
 import DiamondIcon from "@mui/icons-material/Diamond";
 import WarningIcon from "@mui/icons-material/Warning";
 import ViewApartmentModal from "../modal/ViewApartmentModal";
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const MatchCard = ({
   apt,
@@ -133,22 +134,21 @@ const MatchCard = ({
     
     setSaving(true);
     try {
-      await axios.post(
-        "http://localhost:4000/api/user/save",
-        { apartmentId: apt._id },
-        { withCredentials: true }
-      );
-      
-      // Update local state
+      // Calculate the new saved status (opposite of current)
       const newSavedStatus = !savedStatus;
+      
+      // Update local state first for immediate UI feedback
       setSavedStatus(newSavedStatus);
       
-      // Notify parent component if callback provided
+      // Call the parent component's onSaveToggle function
+      // This is critical - pass the apartment ID and the NEW status
       if (onSaveToggle) {
-        onSaveToggle(apt._id, newSavedStatus);
+        await onSaveToggle(apt._id, newSavedStatus);
       }
     } catch (err) {
       console.error("Save toggle error:", err);
+      // If there was an error, revert the UI
+      setSavedStatus(!savedStatus);
     } finally {
       setSaving(false);
     }
@@ -289,7 +289,7 @@ const MatchCard = ({
           <Box sx={{ width: { xs: "100%", md: 240 }, position: "relative" }}>
             <CardMedia
               component="img"
-              image={`http://localhost:4000${
+              image={`${API_BASE_URL}${
                 gallery[currentStep] || "/images/no-image.png"
               }`}
               alt="Apartment Preview"

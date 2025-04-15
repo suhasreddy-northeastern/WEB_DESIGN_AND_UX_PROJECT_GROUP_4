@@ -1,44 +1,77 @@
-// middleware/uploadMiddleware.js
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config();
 
-// Ensure images directory exists
-const imagePath = path.join(__dirname, '../../images');
-if (!fs.existsSync(imagePath)) {
-  fs.mkdirSync(imagePath, { recursive: true });
-}
-
-// Configure storage
+// Configure storage with better debugging
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, imagePath);
+  destination: function(req, file, cb) {
+    // Make sure this path matches what your server.js is configured to serve
+    const uploadDir = path.join(__dirname, '../uploads');
+    console.log("Upload destination directory:", uploadDir);
+    
+    // Ensure the directory exists
+    if (!fs.existsSync(uploadDir)) {
+      console.log("Creating uploads directory:", uploadDir);
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    // Log file info
+    console.log("Receiving file:", {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size
+    });
+    
+    cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `apt-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }  
+  filename: function(req, file, cb) {
+    // Create a consistent filename format
+    const ext = path.extname(file.originalname);
+    const filename = `apt-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    console.log("Generated filename:", filename);
+    cb(null, filename);
+  }
 });
 
-// File filter for image types
+// Set up file filter for images
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
-
-  if (allowedTypes.includes(file.mimetype)) {
+  // Accept only image file types
+  if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file format. Only JPEG, PNG, GIF, and SVG are allowed.'), false);
+    console.log("Rejected file:", file.originalname, file.mimetype);
+    cb(new Error('Only image files are allowed!'), false);
   }
 };
 
-
-const upload = multer({ 
+// Create the multer instance with limits
+const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024 // Default to 5MB if not specified
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
+// Add error handling middleware
+const handleUploadErrors = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    // A Multer error occurred
+    console.error("Multer error:", err.message);
+    return res.status(400).json({ 
+      message: `Upload error: ${err.message}`,
+      code: err.code
+    });
+  } else if (err) {
+    // An unknown error occurred
+    console.error("Unknown upload error:", err.message);
+    return res.status(500).json({ 
+      message: `Upload failed: ${err.message}`
+    });
+  }
+  
+  next();
+};
+
 module.exports = upload;
+module.exports.handleUploadErrors = handleUploadErrors;

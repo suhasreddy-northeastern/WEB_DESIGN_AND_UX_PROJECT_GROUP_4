@@ -140,6 +140,7 @@ router.get('/listing-performance', brokerMiddleware, brokerController.getListing
 
 router.get('/listings', brokerMiddleware, brokerController.getBrokerListings);
 router.put('/listings/:id/toggle-active', brokerMiddleware, brokerController.toggleListingActive);
+router.get('/listings/:id', brokerMiddleware, brokerController.getBrokerListingById);
 router.delete('/listings/:id', brokerMiddleware, brokerController.deleteListing);
 
 // ----------------- 📩 Inquiry Management -----------------

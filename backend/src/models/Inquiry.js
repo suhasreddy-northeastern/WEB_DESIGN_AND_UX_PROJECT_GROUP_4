@@ -1,4 +1,3 @@
-// models/Inquiry.js
 const mongoose = require('mongoose');
 
 const inquirySchema = new mongoose.Schema({
@@ -13,6 +12,14 @@ const inquirySchema = new mongoose.Schema({
   apartmentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Apartment',
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  contactNumber: {
+    type: String,
     required: true,
   },
   message: {

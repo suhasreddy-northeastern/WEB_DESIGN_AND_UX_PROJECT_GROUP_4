@@ -50,6 +50,8 @@ router.get('/users', isAuthenticated, isAdmin, userController.getAllUsers);
 
 // Profile routes
 router.get('/profile', isAuthenticated, userController.getProfile);
+// Get notification settings
+router.get('/notification-settings', isAuthenticated, userController.getNotificationSettings);
 router.put('/notification-settings', isAuthenticated, userController.updateNotificationSettings);
 router.put('/change-password', isAuthenticated, userController.changePassword);
 router.post('/upload-profile-image', isAuthenticated, upload.single('profileImage'), userController.uploadProfileImage);
@@ -61,6 +63,8 @@ router.get('/getAll', isAuthenticated, userController.getAllUsers);
 router.post('/uploadImage', isAuthenticated, upload.single('image'), userController.uploadImage);
 router.post('/save', isAuthenticated, isUser, userController.toggleSaveApartment);
 router.get('/saved', isAuthenticated, isUser, userController.getSavedApartments);
+router.post('/contact-broker', isAuthenticated, isUser, userController.contactBroker);
+
 
 
 // ✅ User Preferences and Matching

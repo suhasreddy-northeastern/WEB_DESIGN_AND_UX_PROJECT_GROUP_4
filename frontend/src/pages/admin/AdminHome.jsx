@@ -19,6 +19,8 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -28,13 +30,15 @@ import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 import axios from "axios";
+import { useSelector } from "react-redux";
 
 const AdminHome = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isDarkMode = theme.palette.mode === 'dark';
+  const user = useSelector((state) => state.user.user);
+  
   const [stats, setStats] = useState({
     users: 0,
     brokers: 0,
@@ -43,56 +47,96 @@ const AdminHome = () => {
   });
   const [recentBrokers, setRecentBrokers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
   useEffect(() => {
+    if (!user || user.type !== 'admin') {
+      navigate('/login');
+      return;
+    }
+
     const fetchAdminData = async () => {
       try {
         setLoading(true);
+        setError(null);
 
-        // Mock data for demonstration
-        // In a real app, you would fetch this from your API
-        setStats({
-          users: 487,
-          brokers: 64,
-          properties: 238,
-          pendingBrokers: 12,
+        // Fetch users
+        const usersRes = await axios.get('/api/admin/users', {
+          withCredentials: true,
         });
-
-        setRecentBrokers([
-          {
-            _id: '1',
-            fullName: 'Michael Davis',
-            email: 'michael.davis@example.com',
-            licenseNumber: 'BRK-54321',
-            isApproved: false,
-            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            _id: '2',
-            fullName: 'Emily Wilson',
-            email: 'emily.wilson@example.com',
-            licenseNumber: 'BRK-09876',
-            isApproved: false,
-            createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            _id: '3',
-            fullName: 'Robert Johnson',
-            email: 'robert.johnson@example.com',
-            licenseNumber: 'BRK-13579',
-            isApproved: false,
-            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        ]);
+        
+        // Fetch all brokers
+        const brokersRes = await axios.get('/api/admin/brokers', {
+          withCredentials: true,
+        });
+        
+        // Fetch pending brokers
+        const pendingBrokersRes = await axios.get('/api/admin/pending-brokers', {
+          withCredentials: true,
+        });
+        
+        // Fetch properties (apartments)
+        const propertiesRes = await axios.get('/api/apartments', {
+          withCredentials: true,
+        });
+        
+        // Set states with real data
+        setStats({
+          users: usersRes.data.length || 0,
+          brokers: brokersRes.data.length || 0,
+          properties: propertiesRes.data.length || 0,
+          pendingBrokers: pendingBrokersRes.data.length || 0,
+        });
+        
+        // Get most recent pending brokers (up to 3)
+        const sortedPendingBrokers = pendingBrokersRes.data
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 3);
+          
+        setRecentBrokers(sortedPendingBrokers);
       } catch (error) {
         console.error('Error fetching admin data:', error);
+        setError('Failed to load admin data. Please try again later.');
+        showSnackbar('Failed to load admin data', 'error');
       } finally {
         setLoading(false);
       }
     };
 
     fetchAdminData();
-  }, []);
+  }, [user, navigate]);
+
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  const handleApproveBroker = async (brokerId) => {
+    try {
+      await axios.post(`/api/admin/approve-broker/${brokerId}`, {}, {
+        withCredentials: true,
+      });
+      
+      // Update the recentBrokers list by removing the approved broker
+      setRecentBrokers(recentBrokers.filter(broker => broker._id !== brokerId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        pendingBrokers: prev.pendingBrokers - 1,
+        brokers: prev.brokers + 1,
+      }));
+      
+      showSnackbar('Broker approved successfully');
+    } catch (error) {
+      console.error('Error approving broker:', error);
+      showSnackbar('Failed to approve broker', 'error');
+    }
+  };
 
   if (loading) {
     return (
@@ -105,6 +149,21 @@ const AdminHome = () => {
   return (
     <Box sx={{ py: 4 }}>
       <Container maxWidth="lg">
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={() => setSnackbarOpen(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={snackbarSeverity}
+            sx={{ width: '100%' }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
+        
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" fontWeight="bold" sx={{ mb: 1 }}>
             Admin Dashboard
@@ -113,6 +172,12 @@ const AdminHome = () => {
             Welcome to the HomeFit admin portal. Manage users, brokers, and properties.
           </Typography>
         </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -213,7 +278,7 @@ const AdminHome = () => {
                 </Typography>
                 <Button 
                   component={Link} 
-                  to="/admin/properties" 
+                  to="/admin/listings" 
                   variant="text" 
                   size="small"
                   color="primary"
@@ -319,6 +384,13 @@ const AdminHome = () => {
                               >
                                 License: {broker.licenseNumber || 'N/A'}
                               </Typography>
+                              <Typography
+                                component="span"
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Submitted: {new Date(broker.createdAt).toLocaleDateString()}
+                              </Typography>
                             </>
                           }
                         />
@@ -336,6 +408,7 @@ const AdminHome = () => {
                             <IconButton 
                               edge="end" 
                               color="success"
+                              onClick={() => handleApproveBroker(broker._id)}
                             >
                               <CheckCircleIcon fontSize="small" />
                             </IconButton>
@@ -424,7 +497,7 @@ const AdminHome = () => {
                     color="primary"
                     size="large"
                     component={Link}
-                    to="/admin/properties"
+                    to="/admin/listings"
                     startIcon={<ApartmentIcon />}
                     sx={{ 
                       py: 1.5,
@@ -442,7 +515,7 @@ const AdminHome = () => {
                     color="primary"
                     size="large"
                     component={Link}
-                    to="/admin/dashboard"
+                    to="/admin/settings"
                     startIcon={<DashboardIcon />}
                     sx={{ 
                       py: 1.5,
@@ -450,7 +523,7 @@ const AdminHome = () => {
                       justifyContent: 'flex-start',
                     }}
                   >
-                    Full Dashboard
+                    Admin Settings
                   </Button>
                 </Grid>
               </Grid>

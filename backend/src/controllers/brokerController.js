@@ -453,3 +453,38 @@ exports.getNotificationSettings = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch notification settings' });
   }
 };
+
+
+// Get a specific listing by ID
+exports.getBrokerListingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const brokerEmail = req.session.user.email;
+    
+    // Ensure the broker owns this listing
+    const listing = await Apartment.findById(id);
+    if (!listing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
+    
+    if (listing.brokerEmail !== brokerEmail) {
+      return res.status(403).json({ message: 'You do not have permission to view this listing' });
+    }
+    
+    // Get inquiry count for this listing (this is real data, not random)
+    const inquiryCount = await Inquiry.countDocuments({ apartmentId: id });
+    
+    // Enrich the listing with additional data
+    const enrichedListing = {
+      ...listing.toObject(),
+      inquiries: inquiryCount
+      // Only include views if it already exists in the listing
+      // No random data generation
+    };
+    
+    res.status(200).json(enrichedListing);
+  } catch (error) {
+    console.error('Error fetching broker listing:', error);
+    res.status(500).json({ message: 'Failed to fetch listing details' });
+  }
+};

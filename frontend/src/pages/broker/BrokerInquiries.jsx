@@ -35,6 +35,8 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 dayjs.extend(relativeTime);
 
 const BrokerInquiries = () => {
@@ -53,7 +55,7 @@ const BrokerInquiries = () => {
     const fetchInquiries = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:4000/api/broker/inquiries', {
+        const response = await axios.get(`${API_BASE_URL}'/api/broker/inquiries`, {
           withCredentials: true,
         });
         setInquiries(response.data.inquiries || []);
@@ -113,7 +115,7 @@ const BrokerInquiries = () => {
 
     try {
       await axios.post(
-        `http://localhost:4000/api/broker/inquiries/${selectedInquiry._id}/reply`,
+        `${API_BASE_URL}/api/broker/inquiries/${selectedInquiry._id}/reply`,
         { message: replyMessage },
         { withCredentials: true }
       );

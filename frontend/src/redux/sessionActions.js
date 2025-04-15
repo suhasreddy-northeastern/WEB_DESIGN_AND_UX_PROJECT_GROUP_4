@@ -12,7 +12,7 @@ export const checkSession = () => async (dispatch) => {
       if (user.type === 'broker') {
         try {
           // Make a specific API call to get broker data with approval status
-          const brokerRes = await axios.get('/api/broker/me', {
+          const brokerRes = await axios.get('/broker/me', {
             withCredentials: true
           });
           

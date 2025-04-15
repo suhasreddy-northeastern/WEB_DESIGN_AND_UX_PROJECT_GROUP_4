@@ -44,6 +44,8 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 dayjs.extend(relativeTime);
 
 const AdminBrokers = () => {
@@ -548,7 +550,7 @@ const AdminBrokers = () => {
                     startIcon={<VisibilityIcon />}
                     href={selectedBroker.licenseDocumentUrl.startsWith('http') 
                       ? selectedBroker.licenseDocumentUrl 
-                      : `http://localhost:4000${selectedBroker.licenseDocumentUrl}`}
+                      : `${API_BASE_URL}${selectedBroker.licenseDocumentUrl}`}
                     target="_blank"
                     sx={{ mt: 1 }}
                   >

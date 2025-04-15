@@ -1,345 +1,425 @@
+// src/pages/preferences/PreferenceForm.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Button,
   Typography,
-  LinearProgress,
-  ToggleButton,
-  Container,
+  Grid,
   Paper,
-  Stack,
+  Button,
+  Container,
   CircularProgress,
-  useTheme,
+  Alert,
+  Chip,
+  Collapse
 } from "@mui/material";
-import { questions } from "../../content/content";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import SuccessModal from "../../components/common/modal/SuccessModal";
+import { styled } from "@mui/material/styles";
+import PreferenceFormStepper from "../../components/preference/PreferenceFormStepper";
+import BasicInfoStep from "../../components/preference/BasicInfoStep";
+import LocationStep from "../../components/preference/LocationStep";
+import BudgetFeaturesStep from "../../components/preference/BudgetFeaturesStep";
+import AmenitiesStep from "../../components/preference/AmenitiesStep";
+import { loadGoogleMapsApi } from "../../components/map/GoogleMapsLoader";
+import InfoIcon from "@mui/icons-material/Info";
+import CloseIcon from "@mui/icons-material/Close";
+import IconButton from "@mui/material/IconButton";
 
-const transformAnswers = (raw) => {
-  const mapLease = {
-    "Just Me": "1",
-    "2 People": "2",
-    "3 People": "3",
-    "4+ People": "4+",
-  };
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
-  const mapMoveInDate = {
-    "Immediately": new Date(),
-    "In the next month": new Date(new Date().setMonth(new Date().getMonth() + 1)),
-    "In 3 months or more": new Date(new Date().setMonth(new Date().getMonth() + 3)),
-  };
+// Form step labels
+const steps = ["Basic Info", "Location", "Budget & Features", "Amenities"];
 
-  return {
-    ...raw,
-    leaseCapacity: mapLease[raw.leaseCapacity] || raw.leaseCapacity,
-    moveInDate: mapMoveInDate[raw.moveInDate] || new Date(),
-  };
-};
+// Google Maps API Key
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+
+// Styled components
+const FormContainer = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  marginBottom: theme.spacing(4),
+  borderRadius: 16,
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 4px 20px rgba(0,0,0,0.3)' 
+    : '0 4px 20px rgba(0,0,0,0.05)',
+}));
+
+const DefaultsAlert = styled(Alert)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+  borderRadius: 8,
+  backgroundColor: 'rgba(0, 179, 134, 0.1)',
+  border: '1px solid rgba(0, 179, 134, 0.2)',
+  '& .MuiAlert-icon': {
+    color: '#00b386'
+  }
+}));
 
 const PreferenceForm = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [prefId, setPrefId] = useState(null);
-  
   const navigate = useNavigate();
-  const user = useSelector((state) => state.user.currentUser);
-  const theme = useTheme();
-  
-  // Get current theme mode for styling
-  const isDarkMode = theme.palette.mode === 'dark';
-
-  const currentQuestion = questions[currentIndex];
-  const selected = answers[currentQuestion.key];
-
-  // Auto-redirect after showing success modal
-  useEffect(() => {
-    let redirectTimer;
-    if (successModalOpen && prefId) {
-      redirectTimer = setTimeout(() => {
-        // Force refresh parameter ensures new match scores are calculated
-        navigate(`/matches/${prefId}?forceRefresh=true`);
-      }, 2000);
+  const [activeStep, setActiveStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [mapsApiError, setMapsApiError] = useState('');
+  const [isMapsApiLoading, setIsMapsApiLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(true);
+  const [showDefaultsAlert, setShowDefaultsAlert] = useState(true);
+  const [formData, setFormData] = useState({
+    type: "Rent",
+    bedrooms: "1",
+    priceRange: "$1,000-$2,000",
+    neighborhood: "Quiet and Residential",
+    amenities: [],
+    style: "Modern",
+    floor: "Mid-level Floor",
+    moveInDate: "",
+    parking: "Yes",
+    transport: "Close",
+    sqft: "",
+    safety: "High",
+    pets: "Allowed",
+    view: "No Specific View",
+    leaseCapacity: "1",
+    roommates: "No",
+    // Add location preference
+    locationPreference: {
+      center: [0, 0],
+      radius: 5,
+      address: ""
     }
-    return () => clearTimeout(redirectTimer);
-  }, [successModalOpen, prefId, navigate]);
+  });
 
-  // Check if we have existing preferences to pre-fill
+  // Load Google Maps API
   useEffect(() => {
-    const fetchExistingPreferences = async () => {
+    const initMapsApi = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:4000/api/user/preferences/latest",
-          { withCredentials: true }
-        );
-        
-        if (res.data && res.data.preference) {
-          // Map back from DB format to form format
-          const pref = res.data.preference;
-          
-          // You could add logic here to convert DB values back to form values
-          // This is a simplified example
-          // const formattedAnswers = {};
-          // setAnswers(formattedAnswers);
-        }
-      } catch (err) {
-        // It's okay if this fails - user may not have preferences yet
-        console.log("No existing preferences found");
+        setIsMapsApiLoading(true);
+        await loadGoogleMapsApi(GOOGLE_MAPS_API_KEY);
+        setIsMapsApiLoading(false);
+      } catch (error) {
+        console.error('Error loading Google Maps API:', error);
+        setMapsApiError('Failed to load Google Maps. Please check your internet connection and refresh the page.');
+        setIsMapsApiLoading(false);
       }
     };
     
-    // Uncomment to enable loading existing preferences
-    // fetchExistingPreferences();
+    initMapsApi();
   }, []);
 
-  const handleSelect = (value) => {
-    if (currentQuestion.type === "checkbox") {
-      const current = answers[currentQuestion.key] || [];
-      const updated = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-      setAnswers({ ...answers, [currentQuestion.key]: updated });
-    } else {
-      setAnswers({ ...answers, [currentQuestion.key]: value });
+  // Fetch existing preferences if any
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/api/user/preferences/latest`,
+          { withCredentials: true }
+        );
+        
+        if (response.data && response.data.preference) {
+          const pref = response.data.preference;
+          
+          // Merge existing preferences with the default state
+          setFormData(prevState => ({
+            ...prevState,
+            ...pref,
+            // Initialize location preference if it exists
+            locationPreference: pref.locationPreference || {
+              center: [0, 0],
+              radius: 5,
+              address: ""
+            }
+          }));
+          
+          // User has previous preferences
+          setIsNewUser(false);
+          setShowDefaultsAlert(false);
+        }
+      } catch (error) {
+        console.error("Error fetching preferences:", error);
+        // No preferences found, continue with defaults
+        setIsNewUser(true);
+        setShowDefaultsAlert(true);
+      }
+    };
+
+    fetchPreferences();
+  }, []);
+
+  // Validate form data for the current step
+  const validateStep = (step) => {
+    let stepErrors = {};
+    let isValid = true;
+
+    switch (step) {
+      case 0: // Basic Info
+        if (!formData.moveInDate) {
+          stepErrors.moveInDate = "Please select a move-in date";
+          isValid = false;
+        }
+        break;
+      case 1: // Location
+        if (!formData.locationPreference.address) {
+          stepErrors.locationAddress = "Please enter a location";
+          isValid = false;
+        }
+        if (formData.locationPreference.center[0] === 0 && formData.locationPreference.center[1] === 0) {
+          stepErrors.locationCoordinates = "Please select a location on the map";
+          isValid = false;
+        }
+        break;
+      case 2: // Budget & Features
+        // All fields have default values, so no validation needed
+        break;
+      case 3: // Amenities
+        // Optional, so no validation needed
+        break;
+      default:
+        break;
+    }
+
+    setErrors(stepErrors);
+    return isValid;
+  };
+
+  // Handle form field changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear errors for this field if any
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
+  // Handle checkbox changes for amenities
+  const handleCheckboxChange = (e) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      amenities: checked
+        ? [...prev.amenities, name]
+        : prev.amenities.filter((item) => item !== name),
+    }));
+  };
+
+  // Handle location preference changes
+  const handleLocationChange = (locationData) => {
+    setFormData(prev => ({
+      ...prev,
+      locationPreference: locationData
+    }));
+
+    // Clear location-related errors
+    if (errors.locationAddress || errors.locationCoordinates) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.locationAddress;
+        delete newErrors.locationCoordinates;
+        return newErrors;
+      });
+    }
+  };
+
+  // Move to next step
   const handleNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    } else {
-      handleSubmit();
+    if (validateStep(activeStep)) {
+      setActiveStep(prevActiveStep => prevActiveStep + 1);
     }
   };
 
+  // Move to previous step
   const handleBack = () => {
-    if (currentIndex > 0) setCurrentIndex((prev) => prev - 1);
+    setActiveStep(prevActiveStep => prevActiveStep - 1);
   };
 
-  const handleSubmit = async () => {
+  // Submit preferences
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate current step before submitting
+    if (!validateStep(activeStep)) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
-      setSubmitting(true);
-      const payload = {
-        ...transformAnswers(answers),
-      };
-      console.log("Submitting preference payload:", payload);
-
-      const res = await axios.post(
-        "http://localhost:4000/api/user/preferences",
-        payload,
+      const response = await axios.post(
+        `${API_BASE_URL}/api/user/preferences`,
+        formData,
         { withCredentials: true }
       );
-  
-      setPrefId(res.data.preference._id);
-      setSuccessMessage(res.data.message);
-      setSuccessModalOpen(true);
-    } catch (err) {
-      console.error("Submission failed", err);
-      alert("Something went wrong. Try again.");
-    } finally {
-      setSubmitting(false);
+      
+      // Navigate to matches page with the new preference ID
+      navigate(`/matches/${response.data.preference._id}`);
+    } catch (error) {
+      console.error("Error submitting preferences:", error);
+      alert("Failed to submit preferences. Please try again.");
+      setIsSubmitting(false);
     }
   };
 
-  const isSelected = (value) => {
-    return currentQuestion.type === "checkbox"
-      ? selected?.includes(value)
-      : selected === value;
-  };
-
-  const progressPercentage = ((currentIndex + 1) / questions.length) * 100;
-
-  // Dynamic styling based on theme mode
-  const paperStyle = {
-    p: { xs: 3, md: 5 }, 
-    borderRadius: 3,
-    border: isDarkMode 
-      ? '1px solid rgba(35, 206, 163, 0.05)' 
-      : '1px solid rgba(0, 179, 134, 0.1)',
-    boxShadow: isDarkMode
-      ? '0 6px 16px rgba(0, 0, 0, 0.2)'
-      : '0 6px 16px rgba(0, 179, 134, 0.12)'
-  };
-
-  const getToggleButtonStyle = (selected) => ({
-    justifyContent: "flex-start",
-    borderRadius: 2,
-    px: 3,
-    py: 2,
-    fontWeight: 500,
-    textAlign: "left",
-    transition: 'all 0.2s ease-in-out',
-    border: selected 
-      ? '2px solid #00b386' 
-      : isDarkMode 
-        ? '1px solid rgba(35, 206, 163, 0.1)'
-        : '1px solid rgba(0, 179, 134, 0.1)',
-    backgroundColor: selected 
-      ? isDarkMode 
-        ? 'rgba(0, 179, 134, 0.1)'
-        : 'rgba(0, 179, 134, 0.05)'
-      : 'transparent',
-    color: selected 
-      ? '#00b386' 
-      : theme.palette.text.primary,
-    '&:hover': {
-      backgroundColor: isDarkMode
-        ? 'rgba(0, 179, 134, 0.08)'
-        : 'rgba(0, 179, 134, 0.03)',
-      border: selected 
-        ? '2px solid #00b386' 
-        : '1px solid rgba(0, 179, 134, 0.3)',
-      transform: 'translateY(-2px)',
-      boxShadow: isDarkMode
-        ? '0 4px 8px rgba(0, 0, 0, 0.2)'
-        : '0 4px 8px rgba(0, 179, 134, 0.1)',
+  // Get content for current step
+  const getStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <BasicInfoStep 
+            formData={formData} 
+            handleChange={handleChange} 
+            errors={errors}
+          />
+        );
+      case 1:
+        return (
+          <LocationStep
+            formData={formData}
+            handleLocationChange={handleLocationChange}
+            googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+            errors={errors}
+          />
+        );
+      case 2:
+        return (
+          <BudgetFeaturesStep
+            formData={formData}
+            handleChange={handleChange}
+            errors={errors}
+          />
+        );
+      case 3:
+        return (
+          <AmenitiesStep
+            formData={formData}
+            handleCheckboxChange={handleCheckboxChange}
+            errors={errors}
+          />
+        );
+      default:
+        return "Unknown step";
     }
-  });
-
-  const getCircleStyle = (selected) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
-    backgroundColor: selected 
-      ? '#00b386' 
-      : isDarkMode
-        ? 'rgba(0, 179, 134, 0.15)'
-        : 'rgba(0, 179, 134, 0.1)',
-    color: selected ? '#fff' : '#00b386',
-    fontWeight: 600,
-    mr: 2
-  });
+  };
 
   return (
     <Container maxWidth="md" sx={{ py: 8 }}>
-      <Paper 
-        elevation={isDarkMode ? 2 : 3} 
-        sx={paperStyle}
-      >
-        <Box mb={4}>
-          <Typography variant="body2" color="text.secondary" mb={1} fontWeight={500}>
-            Question {currentIndex + 1} of {questions.length}
-          </Typography>
-          
-          <Typography 
-            variant="h5" 
-            fontWeight={600} 
-            mb={3}
-            sx={{ 
-              position: 'relative',
-              display: 'inline-block',
-              color: theme.palette.text.primary,
-              '&:after': {
-                content: '""',
-                position: 'absolute',
-                width: '60px',
-                height: '3px',
-                bottom: '-10px',
-                left: 0,
-                backgroundColor: theme.palette.primary.main,
-                borderRadius: '2px'
-              }
-            }}
-          >
-            {currentQuestion.question}
-          </Typography>
-        </Box>
+      <Typography variant="h4" fontWeight={700} align="center" gutterBottom>
+        Find Your Perfect Match
+      </Typography>
+      <Typography variant="subtitle1" align="center" color="text.secondary" paragraph>
+        Tell us your preferences and we'll match you with the perfect apartment.
+      </Typography>
 
-        <Stack spacing={2.5}>
-          {currentQuestion.options.map((option, idx) => (
-            <ToggleButton
-              key={idx}
-              value={option}
-              selected={isSelected(option)}
-              onChange={() => handleSelect(option)}
-              sx={getToggleButtonStyle(isSelected(option))}
-            >
-              <Box 
-                component="span" 
-                sx={getCircleStyle(isSelected(option))}
+      {mapsApiError && (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          {mapsApiError}
+        </Alert>
+      )}
+
+      {/* Default Values Alert for New Users */}
+      {isNewUser && (
+        <Collapse in={showDefaultsAlert}>
+          <DefaultsAlert 
+            severity="info" 
+            icon={<InfoIcon />}
+            action={
+              <IconButton
+                aria-label="close"
+                color="inherit"
+                size="small"
+                onClick={() => setShowDefaultsAlert(false)}
               >
-                {String.fromCharCode(65 + idx)}
-              </Box>
-              {option}
-            </ToggleButton>
-          ))}
-        </Stack>
-
-        <Box sx={{ mt: 5, mb: 2 }}>
-          <LinearProgress
-            variant="determinate"
-            value={progressPercentage}
-            sx={{ 
-              height: 8, 
-              borderRadius: 5, 
-              backgroundColor: isDarkMode 
-                ? "rgba(0, 179, 134, 0.15)"
-                : "rgba(0, 179, 134, 0.1)",
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: '#00b386',
-                borderRadius: 5,
-              }
-            }}
-          />
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ mt: 1, textAlign: 'right' }}
-          >
-            {progressPercentage.toFixed(0)}% Complete
-          </Typography>
-        </Box>
-
-        <Box display="flex" justifyContent="space-between" mt={4}>
-          <Button
-            variant="outlined"
-            onClick={handleBack}
-            disabled={currentIndex === 0 || submitting}
-            sx={{ 
-              minWidth: 100,
-              px: 3,
-            }}
-          >
-            Back
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={
-              submitting || (currentQuestion.type === "checkbox"
-                ? !selected || selected.length === 0
-                : !selected)
+                <CloseIcon fontSize="inherit" />
+              </IconButton>
             }
-            sx={{
-              minWidth: 100,
-              px: 3,
-              background: `linear-gradient(45deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
-            }}
           >
-            {submitting ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : currentIndex === questions.length - 1 ? (
-              "Submit"
-            ) : (
-              "Next"
-            )}
-          </Button>
-        </Box>
-      </Paper>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                We've pre-filled the form with suggested values
+              </Typography>
+              <Typography variant="body2">
+                These are just starting points. Please review and adjust to find your perfect match!
+              </Typography>
+              <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Chip size="small" label="Budget" color="primary" variant="outlined" sx={{ bgcolor: 'rgba(0, 179, 134, 0.08)' }} />
+                <Chip size="small" label="Location" color="primary" variant="outlined" sx={{ bgcolor: 'rgba(0, 179, 134, 0.08)' }} />
+                <Chip size="small" label="Size" color="primary" variant="outlined" sx={{ bgcolor: 'rgba(0, 179, 134, 0.08)' }} />
+                <Chip size="small" label="Features" color="primary" variant="outlined" sx={{ bgcolor: 'rgba(0, 179, 134, 0.08)' }} />
+              </Box>
+            </Box>
+          </DefaultsAlert>
+        </Collapse>
+      )}
 
-      {/* Success Modal */}
-      <SuccessModal 
-        open={successModalOpen} 
-        message={successMessage || "Preferences Saved!"} 
-        subtext="Finding the best apartment matches for you..." 
-      />
+      {isMapsApiLoading && activeStep === 1 ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 8 }}>
+          <CircularProgress size={40} sx={{ mb: 2 }} />
+          <Typography>Loading Google Maps...</Typography>
+        </Box>
+      ) : (
+        <FormContainer>
+          <PreferenceFormStepper activeStep={activeStep} steps={steps} />
+          
+          <Box>
+            {getStepContent(activeStep)}
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+              <Button
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                variant="outlined"
+                sx={{ 
+                  borderColor: '#00b386',
+                  color: '#00b386',
+                  '&:hover': {
+                    borderColor: '#00b386',
+                    backgroundColor: 'rgba(0, 179, 134, 0.08)',
+                  }
+                }}
+              >
+                Back
+              </Button>
+              
+              <Box>
+                {activeStep === steps.length - 1 ? (
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    sx={{
+                      bgcolor: '#00b386',
+                      '&:hover': { bgcolor: '#008f6c' },
+                      px: 4,
+                      py: 1
+                    }}
+                  >
+                    {isSubmitting ? (
+                      <CircularProgress size={24} sx={{ color: 'white' }} />
+                    ) : (
+                      'Find Matches'
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    onClick={handleNext}
+                    sx={{
+                      bgcolor: '#00b386',
+                      '&:hover': { bgcolor: '#008f6c' },
+                      px: 4,
+                      py: 1
+                    }}
+                  >
+                    Next
+                  </Button>
+                )}
+              </Box>
+            </Box>
+          </Box>
+        </FormContainer>
+      )}
     </Container>
   );
 };
