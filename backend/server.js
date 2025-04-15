@@ -28,17 +28,19 @@ const allowedOrigins = [
   'https://homefit-group4.vercel.app'
 ];
 
-// ✅ Enable CORS with credentials
-app.use(cors({
+// ✅ Use shared CORS config
+const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow tools like Postman
+    if (!origin) return callback(null, true); // Allow tools like Postman
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
-}));
+};
 
-app.options('*', cors()); 
+app.use(cors(corsOptions));
+
+app.options('*', cors(corsOptions));
 
 
 // ✅ Body parsing middleware
