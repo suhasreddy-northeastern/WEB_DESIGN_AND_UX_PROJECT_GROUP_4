@@ -24,10 +24,13 @@ const PORT = process.env.PORT || 4000;
 
 // ✅ Enable CORS with credentials
 app.use(cors({
-  origin: 'http://localhost:3000',
-  'https://web-design-and-ux-project-group-4-xqoa.vercel.app',
+  origin: [
+    'http://localhost:3000',
+    'https://web-design-and-ux-project-group-4-xqoa.vercel.app'
+  ],
   credentials: true
 }));
+
 
 // ✅ Body parsing middleware
 app.use(express.json());
