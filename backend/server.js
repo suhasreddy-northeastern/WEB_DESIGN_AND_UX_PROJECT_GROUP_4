@@ -22,44 +22,27 @@ require('./src/utils/redisClient');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Updated allowedOrigins list - ensure all your frontend URLs are here
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://web-design-and-ux-project-group-4-xqoa.vercel.app',
-  'https://homefit-group4.vercel.app',
-  'https://web-design-and-ux-project-group-4.onrender.com',
-  // Add your actual deployed frontend URL if different from above
-];
+// ⚠️ ALLOW ALL ORIGINS: This is less secure but will fix your CORS issues
+app.use((req, res, next) => {
+  // Allow requests from any origin
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-// Improved CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-// Apply CORS middleware before route handlers
-app.use(cors(corsOptions));
-
-// Handle preflight requests
-app.options('*', cors(corsOptions));
-
-// ✅ Body parsing middleware
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Session middleware using MongoDB
+// Session middleware using MongoDB with more permissive settings for cross-origin cookies
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback_secret_for_development',
   resave: false,
@@ -70,14 +53,13 @@ app.use(session({
   }),
   cookie: {
     httpOnly: true,
-    // Set secure to false in development, true in production
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: true, // Keep true for security, but ensure your site is HTTPS
+    sameSite: 'none', // Important for cross-origin requests
     maxAge: 1000 * 60 * 60 // 1 hour
   }
 }));
 
-// ✅ Connect to MongoDB
+// Connect to MongoDB
 require('./src/config/db');
 
 // Initialize system settings
@@ -100,7 +82,7 @@ app.use(async (req, res, next) => {
   const allowedPaths = [
     '/api/user/login',
     '/api/user/logout',
-    '/api/user/create',  // Added signup/create endpoint to allowed paths
+    '/api/user/create',
     '/api/user/session',
     '/api/system/maintenance-status',
     '/api-docs'
@@ -178,7 +160,7 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
-  console.log(`CORS enabled for origins: ${allowedOrigins.join(', ')}`);
+  console.log(`CORS enabled for: ALL ORIGINS`);
 });
 
 module.exports = app;
