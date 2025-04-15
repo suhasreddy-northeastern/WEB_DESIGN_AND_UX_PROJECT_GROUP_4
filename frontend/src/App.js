@@ -64,7 +64,6 @@ import { updateUser } from "./redux/userSlice";
 import { MaintenanceProvider, useMaintenanceMode } from "./components/maintenance/MaintenanceContext";
 import MaintenanceMode from "./components/maintenance/MaintenanceMode";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
 // 👇 Separate component for route logic
 function AppRoutes() {
   const location = useLocation();
@@ -93,7 +92,7 @@ function AppRoutes() {
       if (user && user.type === "broker") {
         console.log("Fetching broker data for user:", user.email);
         const response = await axios.get(
-          `${API_BASE_URL}/api/broker/me`,
+          "http://localhost:4000/api/broker/me",
           {
             withCredentials: true,
           }

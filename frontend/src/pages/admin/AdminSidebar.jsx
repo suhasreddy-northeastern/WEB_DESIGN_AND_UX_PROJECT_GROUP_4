@@ -21,9 +21,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import { logout } from '../../redux/userSlice';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL;
+import { logout } from '../../redux/userSlice'; // Adjust import path as needed
 
 const AdminSidebar = () => {
   const theme = useTheme();
@@ -37,7 +35,7 @@ const AdminSidebar = () => {
   const handleLogout = async () => {
     try {
       // Using the exact same URL format and axios configuration as ProfileMenu
-      await axios.post(`${API_BASE_URL}/api/user/logout`, {}, { withCredentials: true });
+      await axios.post("http://localhost:4000/api/user/logout", {}, { withCredentials: true });
       dispatch(logout());
       navigate("/login");
     } catch (error) {

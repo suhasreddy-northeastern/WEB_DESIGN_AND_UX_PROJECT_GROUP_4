@@ -30,8 +30,6 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import CloseIcon from "@mui/icons-material/Close";
 import ClearIcon from "@mui/icons-material/Clear";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 dayjs.extend(relativeTime);
 
 const MatchResults = () => {
@@ -81,7 +79,7 @@ const MatchResults = () => {
   useEffect(() => {
     const fetchSavedApartments = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/user/saved`, {
+        const res = await axios.get("http://localhost:4000/api/user/saved", {
           withCredentials: true,
         });
 
@@ -158,7 +156,7 @@ const MatchResults = () => {
         const queryString = queryParams.toString();
 
         const res = await axios.get(
-          `${API_BASE_URL}/api/user/matches/${prefId}?${queryString}`,
+          `http://localhost:4000/api/user/matches/${prefId}?${queryString}`,
           { withCredentials: true }
         );
 
@@ -207,7 +205,7 @@ const MatchResults = () => {
   
       // Call the API to save/unsave
       await axios.post(
-        `${API_BASE_URL}/api/user/save`,
+        "http://localhost:4000/api/user/save", // Fixed API URL with base URL
         { apartmentId: aptId },
         {
           withCredentials: true,

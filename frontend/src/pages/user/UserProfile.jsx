@@ -19,8 +19,6 @@ import ProfileTab from "../../components/profile/ProfileTab/ProfileTab";
 import PasswordTab from "../../components/profile/PasswordTab/PasswordTab";
 import PreferencesTab from "../../components/profile/PreferencesTab/PreferencesTab";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 const UserProfile = () => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
@@ -109,7 +107,7 @@ const UserProfile = () => {
         }
   
         // Fetch fresh user data - use the FULL URL
-        const { data } = await axios.get(`${API_BASE_URL}api/user/session`, {
+        const { data } = await axios.get("http://localhost:4000/api/user/session", {
           withCredentials: true,
         });
   
@@ -133,13 +131,13 @@ const UserProfile = () => {
         }
   
         // Fix these endpoints too
-        const savedResponse = await axios.get(`${API_BASE_URL}/api/user/saved`, {
+        const savedResponse = await axios.get("http://localhost:4000/api/user/saved", {
           withCredentials: true,
         });
         setSavedListings(savedResponse.data);
   
         try {
-          const prefResponse = await axios.get(`${API_BASE_URL}/api/user/preferences/latest`, {
+          const prefResponse = await axios.get("http://localhost:4000/api/user/preferences/latest", {
             withCredentials: true,
           });
           setPreferences(prefResponse.data.preference);
@@ -174,7 +172,8 @@ const UserProfile = () => {
       console.log("Refreshing user data...");
       setLoading(true);
   
-      const { data } = await axios.get(`${API_BASE_URL}/api/user/session`, {
+      // Use the full URL with http://localhost:4000 prefix
+      const { data } = await axios.get("http://localhost:4000/api/user/session", {
         withCredentials: true,
       });
   
@@ -211,7 +210,7 @@ const UserProfile = () => {
       }
       
       // Fix this endpoint too
-      const savedResponse = await axios.get(`${API_BASE_URL}/api/user/saved`, {
+      const savedResponse = await axios.get("http://localhost:4000/api/user/saved", {
         withCredentials: true,
       });
       setSavedListings(savedResponse.data);
@@ -317,7 +316,7 @@ const UserProfile = () => {
     try {
       // Use the full URL
       const profileResponse = await axios.put(
-        `${API_BASE_URL}/api/user/edit`,
+        "http://localhost:4000/api/user/edit",
         {
           fullName: profileData.fullName,
           bio: profileData.bio || "",
@@ -345,7 +344,7 @@ const UserProfile = () => {
   
         // Use the full URL
         const imageResponse = await axios.post(
-          `${API_BASE_URL}/api/user/upload-profile-image`, 
+          "http://localhost:4000/api/user/upload-profile-image", 
           formData, 
           {
             headers: {

@@ -19,8 +19,6 @@ import UserHome from "./user/UserHome";
 import AdminHome from "./admin/AdminHome";
 import BrokerHome from "./broker/BrokerHome";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 const Home = () => {
   const user = useSelector((state) => state.user.user);
   const navigate = useNavigate();
@@ -38,7 +36,7 @@ const Home = () => {
     try {
       setLoading(true);
       const res = await axios.get(
-        `${API_BASE_URL}"/api/user/preferences/latest`,
+        "http://localhost:4000/api/user/preferences/latest",
         {
           withCredentials: true,
         }

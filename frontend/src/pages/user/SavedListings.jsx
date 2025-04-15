@@ -14,8 +14,6 @@ import { useNavigate } from "react-router-dom";
 import MatchCard from "../../components/common/theme/MatchCard";
 import LoadingMessage from "../../components/common/LoadingMessage";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 const SavedListings = () => {
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +23,7 @@ const SavedListings = () => {
   const fetchSavedListings = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/api/user/saved`, {
+      const res = await axios.get("http://localhost:4000/api/user/saved", {
         withCredentials: true,
       });
 
@@ -35,15 +33,15 @@ const SavedListings = () => {
         apartments.map(async (apt) => {
           try {
             const response = await axios.post(
-              `${API_BASE_URL}/api/groq/explanation`,
-              { apartment: apt }, 
+              "http://localhost:4000/api/groq/explanation",
+              { apartment: apt }, // optionally send latest preferences too
               { withCredentials: true }
             );
             return {
               ...apt,
               explanation: response.data.explanation,
               matchScore: response.data.matchScore || 0,
-              currentStep: 0,
+              currentStep: 0, // Initialize currentStep for gallery
             };
           } catch {
             return { 

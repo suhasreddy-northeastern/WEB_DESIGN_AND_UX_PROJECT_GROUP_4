@@ -56,8 +56,6 @@ const BrokerListings = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL;
-
   // Hooks
   const theme = useTheme();
   const navigate = useNavigate();
@@ -499,7 +497,7 @@ const BrokerListings = () => {
                           listing.imageUrls && listing.imageUrls[0]
                             ? listing.imageUrls[0].startsWith("http")
                               ? listing.imageUrls[0]
-                              : `${API_BASE_URL}${listing.imageUrls[0]}`
+                              : `http://localhost:4000${listing.imageUrls[0]}`
                             : "/images/placeholder.jpg"
                         }
                         alt={`${listing.bedrooms || 'Apartment'} in ${listing.neighborhood || 'Location'}`}
