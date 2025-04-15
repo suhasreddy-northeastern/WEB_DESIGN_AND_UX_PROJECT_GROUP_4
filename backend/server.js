@@ -22,12 +22,21 @@ require('./src/utils/redisClient');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://web-design-and-ux-project-group-4-xqoa.vercel.app'
+];
+
 // ✅ Enable CORS with credentials
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://web-design-and-ux-project-group-4-xqoa.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
