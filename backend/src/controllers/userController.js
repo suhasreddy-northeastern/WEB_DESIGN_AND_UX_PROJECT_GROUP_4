@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const Preference = require("../models/Preference");
 const Apartment = require("../models/Apartment");
+const Inquiry = require('../models/Inquiry');
 const { getMatchExplanation } = require("../services/groqService");
 const { calculateMatchScore } = require("../utils/matchScoring"); 
 const { getAsync, setexAsync, delAsync, redisClient } = require('../utils/redisClient');
@@ -128,6 +129,7 @@ exports.loginUser = async (req, res) => {
       email: user.email,
       fullName: user.fullName,
       type: user.type,
+      isApproved: user.isApproved
     };
 
     console.log("✅ Session created:", req.session.user);
@@ -142,21 +144,43 @@ exports.loginUser = async (req, res) => {
 // Update user
 exports.updateUser = async (req, res) => {
   try {
-    const { email, fullName, password } = req.body;
-    const user = await User.findOne({ email });
+    const email = req.session.user?.email;
+    if (!email) return res.status(401).json({ error: "Not authenticated" });
 
+    const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "User not found." });
 
-    if (fullName) user.fullName = fullName;
-    if (password) user.password = password;
+    // Update fields
+    if (req.body.fullName) user.fullName = req.body.fullName;
+    if (req.body.bio) user.bio = req.body.bio;
+    if (req.body.password) user.password = req.body.password;
 
     await user.save();
-    res.status(200).json({ message: "User updated successfully." });
+
+    // Refresh session with updated user
+    req.session.user = user;
+
+    // Prepare response (sanitize sensitive fields)
+    const updatedUser = {
+      _id: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      bio: user.bio,
+      imagePath: user.imagePath,
+      type: user.type
+    };
+
+    res.status(200).json({
+      message: "User updated successfully.",
+      user: updatedUser
+    });
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
+
+
 
 // Delete user
 exports.deleteUser = async (req, res) => {
@@ -809,3 +833,62 @@ exports.getMatches = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Contact Broker
+exports.contactBroker = async (req, res) => {
+  try {
+    const { apartmentId, message, name, contactNumber } = req.body;
+    const userEmail = req.session.user?.email;
+
+    if (!userEmail) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const apartment = await Apartment.findById(apartmentId).populate('broker');
+    if (!apartment) return res.status(404).json({ error: 'Apartment not found' });
+
+    const brokerEmail = apartment.broker?.email;
+    if (!brokerEmail) return res.status(404).json({ error: 'Broker not found' });
+
+    const inquiry = new Inquiry({
+      userEmail,
+      brokerEmail,
+      apartmentId,
+      message,
+      name,
+      contactNumber
+    });
+
+    await inquiry.save();
+
+    res.status(200).json({ message: 'Inquiry submitted successfully.' });
+  } catch (err) {
+    console.error('Error submitting inquiry:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+// Get notification settings
+exports.getNotificationSettings = async (req, res) => {
+  try {
+    const email = req.session.user?.email;
+    if (!email) return res.status(401).json({ error: "Not authenticated" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json({ 
+      notificationSettings: user.notificationSettings || {
+        emailNotifications: true,
+        newInquiryAlerts: true,
+        marketingUpdates: false,
+        accountAlerts: true
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching notification settings:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+

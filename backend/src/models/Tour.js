@@ -1,6 +1,7 @@
+// models/Tour.js
 const mongoose = require('mongoose');
 
-const inquirySchema = new mongoose.Schema({
+const tourSchema = new mongoose.Schema({
   userEmail: {
     type: String,
     required: true,
@@ -22,27 +23,45 @@ const inquirySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  message: {
+  tourDate: {
+    type: Date,
+    required: true,
+  },
+  tourTime: {
     type: String,
     required: true,
   },
+  message: {
+    type: String,
+    default: '',
+  },
   status: {
     type: String,
-    enum: ['pending', 'responded'],
+    enum: ['pending', 'confirmed', 'rescheduled', 'completed', 'canceled'],
     default: 'pending',
   },
   brokerResponse: {
     type: String,
     default: null,
   },
-  responseDate: {
-    type: Date,
-    default: null,
+  userCanceled: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  }
 });
 
-module.exports = mongoose.model('Inquiry', inquirySchema);
+// Update the updatedAt timestamp before saving
+tourSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+module.exports = mongoose.model('Tour', tourSchema);
