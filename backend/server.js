@@ -24,6 +24,7 @@ const PORT = process.env.PORT || 4000;
 
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://web-design-and-ux-project-group-4-xqoa.vercel.app',
   'https://homefit-group4.vercel.app'
 ];
 
