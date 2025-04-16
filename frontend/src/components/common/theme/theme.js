@@ -72,15 +72,6 @@ export const createAppTheme = (mode = "light") => {
       borderRadius: 8,
     },
     components: {
-      // MuiCssBaseline: {
-      //   styleOverrides: (theme) => ({
-      //     body: {
-      //       backgroundColor: theme.palette.background.default,
-      //       color: theme.palette.text.primary,
-      //     },
-      //   }),
-      // },
-
       MuiCssBaseline: {
         styleOverrides: (theme) => ({
           body: {
