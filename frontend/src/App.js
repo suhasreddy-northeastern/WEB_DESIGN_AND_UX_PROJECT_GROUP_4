@@ -212,6 +212,7 @@ function AppRoutes() {
   return (
     <>
       {!hideNavbar && <Navbar />}
+
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
@@ -321,6 +322,7 @@ function AppRoutes() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/resource/:resourceType" element={<ResourcePage />} />
       </Routes>
+
       {!hideFooter && <Footer />}
     </>
   );
