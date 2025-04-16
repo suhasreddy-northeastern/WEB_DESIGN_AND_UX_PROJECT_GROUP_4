@@ -35,7 +35,7 @@ import BrokerLayout from "./pages/broker/BrokerLayout";
 import BrokerDashboard from "./pages/broker/BrokerDashboard";
 import BrokerListings from "./pages/broker/BrokerListings";
 import BrokerInquiries from "./pages/broker/BrokerInquiries";
-import BrokerTours from "./pages/broker/BrokerTours"; 
+import BrokerTours from "./pages/broker/BrokerTours";
 import BrokerProfile from "./pages/broker/BrokerProfile";
 import BrokerRegistration from "./pages/broker/BrokerRegistration";
 import BrokerSettings from "./pages/broker/BrokerSettings";
@@ -61,7 +61,10 @@ import axios from "axios";
 import { updateUser } from "./redux/userSlice";
 
 // Maintenance Mode
-import { MaintenanceProvider, useMaintenanceMode } from "./components/maintenance/MaintenanceContext";
+import {
+  MaintenanceProvider,
+  useMaintenanceMode,
+} from "./components/maintenance/MaintenanceContext";
 import MaintenanceMode from "./components/maintenance/MaintenanceMode";
 
 // 👇 Separate component for route logic
@@ -71,10 +74,15 @@ function AppRoutes() {
   const [loading, setLoading] = useState(true);
   const user = useSelector((state) => state.user.user);
   const isAuthenticated = useSelector((state) => state.user.isAuthenticated);
-  
-  
+
   // Get maintenance mode status
-  const { isInMaintenanceMode, maintenanceMessage, estimatedTime, loading: maintenanceLoading, fetchMaintenanceStatus } = useMaintenanceMode();
+  const {
+    isInMaintenanceMode,
+    maintenanceMessage,
+    estimatedTime,
+    loading: maintenanceLoading,
+    fetchMaintenanceStatus,
+  } = useMaintenanceMode();
 
   const hideNavbar =
     ["/login", "/signup"].includes(location.pathname) ||
@@ -116,9 +124,9 @@ function AppRoutes() {
         await dispatch(checkSession());
 
         // If logged in as admin, refresh maintenance status
-      if (user && user.type === "admin") {
-        fetchMaintenanceStatus();
-      }
+        if (user && user.type === "admin") {
+          fetchMaintenanceStatus();
+        }
       } catch (error) {
         console.error("Session check failed:", error);
       } finally {
@@ -184,30 +192,35 @@ function AppRoutes() {
   }
 
   // Create an array of paths that should be accessible during maintenance mode
-  const allowedPaths = [
-    "/login",
-    "/signup"
-  ];
+  const allowedPaths = ["/login", "/signup"];
 
   // Check if maintenance mode is active and user is not an admin
   // Also check if the current path is allowed during maintenance mode
-  if (isInMaintenanceMode && 
-      (!user || user.type !== "admin") && 
-      !allowedPaths.includes(location.pathname)) {
-    return <MaintenanceMode message={maintenanceMessage} estimatedTime={estimatedTime} />;
+  if (
+    isInMaintenanceMode &&
+    (!user || user.type !== "admin") &&
+    !allowedPaths.includes(location.pathname)
+  ) {
+    return (
+      <MaintenanceMode
+        message={maintenanceMessage}
+        estimatedTime={estimatedTime}
+      />
+    );
   }
 
   return (
     <>
       {!hideNavbar && <Navbar />}
+
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/broker/register" element={<BrokerRegistration />} />
-        <Route path="/map" element={<ApartmentMapPage />} /> {/* New map route */}
-
+        <Route path="/map" element={<ApartmentMapPage />} />{" "}
+        {/* New map route */}
         {/* Admin Layout with nested routes */}
         <Route
           path="/admin"
@@ -223,7 +236,6 @@ function AppRoutes() {
           <Route path="listings" element={<AdminListings />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
-
         {/* Broker Layout with nested routes */}
         <Route
           path="/broker"
@@ -237,13 +249,13 @@ function AppRoutes() {
           <Route path="listings" element={<BrokerListings />} />
           <Route path="listings/:id" element={<BrokerListingDetail />} />
           <Route path="inquiries" element={<BrokerInquiries />} />
-          <Route path="tours" element={<BrokerTours />} /> {/* Add broker tours page */}
+          <Route path="tours" element={<BrokerTours />} />{" "}
+          {/* Add broker tours page */}
           <Route path="add-listing" element={<AgentApartmentForm />} />
           <Route path="profile" element={<BrokerProfile />} />
           <Route path="settings" element={<BrokerSettings />} />
           <Route path="analytics" element={<BrokerAnalytics />} />
         </Route>
-
         {/* Backward compatibility - redirects to the new location within broker layout */}
         <Route
           path="/list-apartment"
@@ -254,7 +266,6 @@ function AppRoutes() {
             </BrokerRoute>
           }
         />
-
         {/* User-only */}
         <Route
           path="/preferences"
@@ -279,7 +290,8 @@ function AppRoutes() {
               <UserTours />
             </UserRoute>
           }
-        /> {/* Add user tours page */}
+        />{" "}
+        {/* Add user tours page */}
         <Route
           path="/profile"
           element={
@@ -305,12 +317,12 @@ function AppRoutes() {
           }
         />
         <Route path="/matches/:prefId" element={<MatchResults />} />
-
         {/* Common */}
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/resource/:resourceType" element={<ResourcePage />} />
       </Routes>
+
       {!hideFooter && <Footer />}
     </>
   );
