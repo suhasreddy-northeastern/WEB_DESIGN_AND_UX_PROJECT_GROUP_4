@@ -53,6 +53,17 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
   const theme = useTheme();
   const primaryColor = "#00b386";
 
+  // Helper function to properly format image URLs
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return "http://localhost:4000/images/no-image.png";
+    
+    // If it's already a full URL, return it as is
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Otherwise, prepend the base URL
+    return `http://localhost:4000${imagePath.startsWith('/') ? imagePath : `/${imagePath}`}`;
+  };
+
   useEffect(() => {
     // Reset active image when modal is opened with a new apartment
     setActiveImage(0);
@@ -443,10 +454,12 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
                       height: "100%",
                       objectFit: "cover",
                     }}
-                    image={`http://localhost:4000${
-                      gallery[activeImage] || "/images/no-image.png"
-                    }`}
+                    image={formatImageUrl(gallery[activeImage])}
                     alt="Apartment image"
+                    onError={(e) => {
+                      console.error(`Failed to load image: ${gallery[activeImage]}`);
+                      e.target.src = "http://localhost:4000/images/no-image.png";
+                    }}
                   />
 
                   {/* Overlay actions */}
@@ -529,9 +542,13 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
                     >
                       <CardMedia
                         component="img"
-                        image={`http://localhost:4000${img}`}
+                        image={formatImageUrl(img)}
                         alt={`Thumbnail ${index + 1}`}
                         sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(e) => {
+                          console.error(`Failed to load thumbnail: ${img}`);
+                          e.target.src = "http://localhost:4000/images/no-image.png";
+                        }}
                       />
                     </Box>
                   ))}
@@ -698,16 +715,19 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
                           >
                             <CardMedia
                               component="img"
-                              image={`http://localhost:4000${
+                              image={formatImageUrl(
                                 prop.imageUrls?.[0] ||
-                                prop.imageUrl ||
-                                "/images/no-image.png"
-                              }`}
+                                prop.imageUrl
+                              )}
                               alt={`Property ${index + 1}`}
                               sx={{
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
+                              }}
+                              onError={(e) => {
+                                console.error(`Failed to load similar property image`);
+                                e.target.src = "http://localhost:4000/images/no-image.png";
                               }}
                             />
                           </Box>
@@ -949,7 +969,7 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
         brokerName={brokerInfo?.fullName || "the broker"}
         brokerEmail={brokerInfo?.email}
         brokerPhone={brokerInfo?.phone}
-        brokerImage={brokerInfo?.imagePath ? `http://localhost:4000${brokerInfo.imagePath}` : null}
+        brokerImage={brokerInfo?.imagePath ? formatImageUrl(brokerInfo.imagePath) : null}
         brokerCompany={brokerInfo?.company}
         apartmentDetails={apartment}
       />
@@ -960,11 +980,11 @@ const ViewApartmentModal = ({ open, onClose, apartment }) => {
         onClose={() => setOpenTourDialog(false)}
         apartmentId={apartment._id}
         brokerName={brokerInfo?.fullName || "the broker"}
-        brokerImage={brokerInfo?.imagePath ? `http://localhost:4000${brokerInfo.imagePath}` : null}
+        brokerImage={brokerInfo?.imagePath ? formatImageUrl(brokerInfo.imagePath) : null}
         apartmentName={`${apartment.bedrooms} BHK in ${apartment.neighborhood}`}
       />
     </>
   );
 };
 
-export default ViewApartmentModal
+export default ViewApartmentModal;

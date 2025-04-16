@@ -45,6 +45,17 @@ const MatchCard = ({
   const [saving, setSaving] = useState(false);
   const [savedStatus, setSavedStatus] = useState(isSaved);
 
+  // Helper function to properly format image URLs
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return "http://localhost:4000/images/no-image.png";
+    
+    // If it's already a full URL, return it as is
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Otherwise, prepend the base URL
+    return `http://localhost:4000${imagePath.startsWith('/') ? imagePath : `/${imagePath}`}`;
+  };
+
   // Simple fallback for high scores when API fails
   const generateHighScoreFallback = () => {
     return [
@@ -283,17 +294,19 @@ const MatchCard = ({
         <Box
           sx={{ display: "flex", flexDirection: { xs: "column", md: "row" } }}
         >
-          {/* Image Section */}
+          {/* Image Section - UPDATED */}
           <Box sx={{ width: { xs: "100%", md: 240 }, position: "relative" }}>
             <CardMedia
               component="img"
-              image={`http://localhost:4000${
-                gallery[currentStep] || "/images/no-image.png"
-              }`}
+              image={formatImageUrl(gallery[currentStep])}
               alt="Apartment Preview"
               sx={{
                 height: { xs: 200, md: "100%" },
                 objectFit: "cover",
+              }}
+              onError={(e) => {
+                console.error(`Failed to load image: ${gallery[currentStep]}`);
+                e.target.src = "http://localhost:4000/images/no-image.png";
               }}
             />
             {gallery.length > 1 && (

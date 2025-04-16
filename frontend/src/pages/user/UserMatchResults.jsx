@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -18,6 +18,7 @@ import {
   Badge,
   Chip,
   Alert,
+  Snackbar,
 } from "@mui/material";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -29,6 +30,7 @@ import FilterComponent from "../../components/common/filter/FilterComponent";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import CloseIcon from "@mui/icons-material/Close";
 import ClearIcon from "@mui/icons-material/Clear";
+import SyncIcon from "@mui/icons-material/Sync";
 
 dayjs.extend(relativeTime);
 
@@ -53,6 +55,16 @@ const MatchResults = () => {
     neighborhoods: [],
     amenities: [],
   });
+  
+  const [forceRefresh, setForceRefresh] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState(Date.now());
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  
+  // Ref to track if we've already refreshed after the current login
+  const hasRefreshedAfterLogin = useRef(false);
+  
+  // Store the last seen auth token to detect changes
+  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken') || '');
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -60,12 +72,91 @@ const MatchResults = () => {
   const itemsPerPage = 4;
   const isDarkMode = theme.palette.mode === "dark";
 
+  // Function to handle login detection
+  const handleAuthChange = useCallback(() => {
+    const currentToken = localStorage.getItem('authToken');
+    
+    // Check if token changed and is not empty (actual login, not logout)
+    if (currentToken && currentToken !== authToken) {
+      console.log("New login detected");
+      
+      // Update the stored token
+      setAuthToken(currentToken);
+      
+      // Only refresh if we haven't refreshed for this login session
+      if (!hasRefreshedAfterLogin.current) {
+        console.log("First refresh after login, forcing data refresh");
+        setForceRefresh(true);
+        setSnackbar({
+          open: true,
+          message: "Updating matches after login..."
+        });
+        
+        // Mark that we've refreshed for this login
+        hasRefreshedAfterLogin.current = true;
+      } else {
+        console.log("Already refreshed once after this login, using cache");
+      }
+    }
+  }, [authToken]);
+
+  // Listen for login events
+  useEffect(() => {
+    // Custom event listener for login events
+    const handleLoginEvent = () => {
+      console.log("Login event detected");
+      
+      // Reset the refresh flag to ensure we do a fresh fetch
+      hasRefreshedAfterLogin.current = false;
+      
+      // Trigger auth change handler to refresh data
+      handleAuthChange();
+    };
+    
+    // Listen for custom login events
+    window.addEventListener('user-logged-in', handleLoginEvent);
+    
+    // Listen for storage events (when localStorage changes in another tab)
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'authToken') {
+        // Reset the refresh flag to ensure we do a fresh fetch
+        hasRefreshedAfterLogin.current = false;
+        handleAuthChange();
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('user-logged-in', handleLoginEvent);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, [handleAuthChange]);
+
+  // Initial auth check on component mount
+  useEffect(() => {
+    // If we already have an auth token when the component mounts,
+    // we've likely returned to this page while already logged in
+    // In that case, we don't want to force a refresh
+    if (authToken) {
+      hasRefreshedAfterLogin.current = true;
+    }
+  }, [authToken]);
+
   // Check for forceRefresh in URL
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const forceRefresh = searchParams.get("forceRefresh") === "true";
+    const shouldForceRefresh = searchParams.get("forceRefresh") === "true";
 
-    if (forceRefresh) {
+    if (shouldForceRefresh) {
+      console.log("Force refresh parameter detected in URL");
+      
+      // This is a manual refresh request, so we should refresh
+      // regardless of whether we've already refreshed after login
+      setForceRefresh(true);
+      setSnackbar({
+        open: true,
+        message: "Refreshing matches from server..."
+      });
+      
       // Remove the parameter from URL after we've read it
       searchParams.delete("forceRefresh");
       const newUrl = `${location.pathname}${
@@ -96,10 +187,15 @@ const MatchResults = () => {
     };
 
     fetchSavedApartments();
-  }, []);
+    
+    // Also refetch saved apartments when forcing a refresh
+    if (forceRefresh) {
+      fetchSavedApartments();
+    }
+  }, [forceRefresh]);
 
   // Convert filters to API parameters
-  const buildQueryParams = () => {
+  const buildQueryParams = useCallback(() => {
     const params = new URLSearchParams();
 
     // Add pagination and sorting
@@ -134,14 +230,14 @@ const MatchResults = () => {
       params.append("amenities", activeFilters.amenities.join(","));
     }
 
-    // Check for force refresh
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get("forceRefresh") === "true") {
+    // Add timestamp or cache buster if forceRefresh is true
+    if (forceRefresh) {
+      params.append("_t", Date.now());
       params.append("forceRefresh", "true");
     }
 
     return params;
-  };
+  }, [page, sortBy, sortOrder, activeFilters, forceRefresh]);
 
   // Fetch matches with filters
   useEffect(() => {
@@ -155,27 +251,69 @@ const MatchResults = () => {
         const queryParams = buildQueryParams();
         const queryString = queryParams.toString();
 
+        console.log(`Fetching matches with params: ${queryString}`);
+        console.log(`Cache control: ${forceRefresh ? 'no-cache' : 'default'}`);
+        
         const res = await axios.get(
           `http://localhost:4000/api/user/matches/${prefId}?${queryString}`,
-          { withCredentials: true }
+          { 
+            withCredentials: true,
+            headers: { 
+              // Only add no-cache headers when forcing a refresh
+              'Cache-Control': forceRefresh ? 'no-cache' : 'default',
+              'Pragma': forceRefresh ? 'no-cache' : 'default'
+            }
+          }
         );
 
         setMatches(res.data.results || []);
         setTotalCount(res.data.totalCount || 0);
         setFilteredCount(res.data.filteredCount || res.data.totalCount || 0);
+        
+        // Reset forceRefresh after successful fetch
+        if (forceRefresh) {
+          setForceRefresh(false);
+          setLastFetchTime(Date.now());
+        }
       } catch (err) {
         console.error("Error fetching matches:", err);
         setMatches([]);
         setTotalCount(0);
         setFilteredCount(0);
         setError("Failed to fetch apartment matches. Please try again later.");
+        
+        // Reset forceRefresh after failed fetch too
+        if (forceRefresh) {
+          setForceRefresh(false);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchMatches();
-  }, [prefId, page, sortBy, sortOrder, activeFilters]);
+  }, [prefId, page, sortBy, sortOrder, activeFilters, forceRefresh, buildQueryParams]);
+
+  // Manual refresh button handler
+  const handleManualRefresh = () => {
+    // Don't allow refreshes more often than every 30 seconds
+    const timeSinceLastFetch = Date.now() - lastFetchTime;
+    if (timeSinceLastFetch < 30000) {
+      setSnackbar({
+        open: true,
+        message: `Please wait before refreshing again (${Math.ceil((30000 - timeSinceLastFetch) / 1000)}s)`
+      });
+      return;
+    }
+    
+    // This is a manual refresh, so we should always do it
+    // regardless of login state
+    setForceRefresh(true);
+    setSnackbar({
+      open: true,
+      message: "Refreshing matches from server..."
+    });
+  };
 
   const handleStepChange = (aptId, direction) => {
     setActiveSteps((prev) => {
@@ -205,7 +343,7 @@ const MatchResults = () => {
   
       // Call the API to save/unsave
       await axios.post(
-        "http://localhost:4000/api/user/save", // Fixed API URL with base URL
+        "http://localhost:4000/api/user/save",
         { apartmentId: aptId },
         {
           withCredentials: true,
@@ -220,6 +358,7 @@ const MatchResults = () => {
       }));
     }
   };
+
   const getMatchColor = (score) => {
     if (score >= 80) return "#36B37E";
     if (score >= 50) return "#FFAB00";
@@ -257,6 +396,13 @@ const MatchResults = () => {
 
   const toggleMobileFilter = () => {
     setMobileFilterOpen(!mobileFilterOpen);
+  };
+  
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
   };
 
   if (loading && page === 1) return <LoadingMessage />;
@@ -323,6 +469,28 @@ const MatchResults = () => {
             </Typography>
 
             <Box sx={{ display: "flex", gap: 2 }}>
+              {/* Refresh button */}
+              <IconButton
+                onClick={handleManualRefresh}
+                disabled={loading || forceRefresh}
+                sx={{
+                  color: primaryColor,
+                  border: `1px solid ${
+                    isDarkMode
+                      ? "rgba(255, 255, 255, 0.23)"
+                      : "rgba(0, 0, 0, 0.23)"
+                  }`,
+                  borderRadius: 1,
+                  animation: forceRefresh ? "spin 1s linear infinite" : "none",
+                  "@keyframes spin": {
+                    "0%": { transform: "rotate(0deg)" },
+                    "100%": { transform: "rotate(360deg)" }
+                  }
+                }}
+              >
+                <SyncIcon />
+              </IconButton>
+            
               {/* Mobile filter toggle button */}
               <Hidden mdUp>
                 <IconButton
@@ -686,6 +854,15 @@ const MatchResults = () => {
           <FilterListIcon />
         </Fab>
       </Hidden>
+      
+      {/* Refresh notification snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Container>
   );
 };

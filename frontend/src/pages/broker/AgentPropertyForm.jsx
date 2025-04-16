@@ -1,41 +1,31 @@
+// AgentApartmentForm.js
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   Box,
   Typography,
-  Grid,
   Paper,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormControl,
-  FormLabel,
-  FormGroup,
-  Checkbox,
-  Button,
-  TextField,
   useTheme,
-  InputAdornment,
-  CircularProgress,
+  Snackbar,
   Alert,
+  Slide,
+  Backdrop,
+  CircularProgress,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import axios from "axios";
-import HomeIcon from "@mui/icons-material/Home";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import BuildIcon from "@mui/icons-material/Build";
-import PeopleIcon from "@mui/icons-material/People";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import SearchIcon from "@mui/icons-material/Search";
-import PlaceIcon from "@mui/icons-material/Place";
 import {
   loadGoogleMapsApi,
   geocodeAddress,
   reverseGeocode,
 } from "../../components/map/GoogleMapsLoader";
 
-// Note: Add the following to your package.json:
-// "@react-google-maps/api": "^2.19.2"
+// Import components
+import FormGroups from "../../components/common/apartmentForm/FormGroups";
+import AmenitiesSection from "../../components/common/apartmentForm/AmenitiesSection";
+import LocationSection from "../../components/common/apartmentForm/LocationSection";
+import ImageUploadSection from "../../components/common/apartmentForm/ImageUploadSection";
+import SubmitSection from "../../components/common/apartmentForm/SubmitSection";
+import FeedbackModal from "../../components/common/apartmentForm/FeedbackModal";
 
 const FormContainer = styled(Paper)(({ theme }) => ({
   maxWidth: 1000,
@@ -52,404 +42,6 @@ const FormContainer = styled(Paper)(({ theme }) => ({
       ? "1px solid rgba(255, 255, 255, 0.05)"
       : "none",
 }));
-
-const MapContainer = styled(Box)(({ theme }) => ({
-  height: 400,
-  width: "100%",
-  borderRadius: 8,
-  overflow: "hidden",
-  marginTop: theme.spacing(2),
-  marginBottom: theme.spacing(2),
-  border:
-    theme.palette.mode === "dark"
-      ? "1px solid rgba(255, 255, 255, 0.1)"
-      : "1px solid rgba(0, 0, 0, 0.1)",
-}));
-
-const amenitiesList = [
-  "Gym",
-  "Swimming Pool",
-  "Parking Space",
-  "Pet-Friendly",
-  "Balcony",
-  "In-Unit Laundry",
-];
-
-const fieldGroups = [
-  {
-    title: (
-      <>
-        <HomeIcon sx={{ mr: 1 }} /> Basic Info
-      </>
-    ),
-    fields: [
-      { name: "type", label: "Listing Type", options: ["Rent", "Buy"] },
-      { name: "bedrooms", label: "Bedrooms", options: ["1", "2", "3", "4+"] },
-      { name: "price", label: "Exact Price (USD)", type: "number" },
-      { name: "moveInDate", label: "Move-in Date", type: "date" },
-    ],
-  },
-  {
-    title: (
-      <>
-        <LocationOnIcon sx={{ mr: 1 }} /> Location & Design
-      </>
-    ),
-    fields: [
-      {
-        name: "neighborhood",
-        label: "Neighborhood",
-        options: [
-          "Quiet and Residential",
-          "Busy Urban Area",
-          "Close to Entertainment & Dining",
-        ],
-      },
-      {
-        name: "style",
-        label: "Style",
-        options: ["Modern", "Traditional", "Loft", "High-rise"],
-      },
-      {
-        name: "floor",
-        label: "Floor Level",
-        options: ["Ground Floor", "Mid-level Floor", "Top Floor"],
-      },
-      {
-        name: "view",
-        label: "View",
-        options: ["City View", "Park View", "Ocean View", "No Specific View"],
-      },
-    ],
-  },
-  {
-    title: (
-      <>
-        <BuildIcon sx={{ mr: 1 }} /> Features
-      </>
-    ),
-    fields: [
-      {
-        name: "sqft",
-        label: "Exact Square Footage (e.g., 1150)",
-        type: "number",
-      },
-      { name: "floor", label: "Floor Level (e.g., 3 or Ground)", type: "text" },
-      { name: "parking", label: "Parking", options: ["Yes", "No"] },
-      {
-        name: "transport",
-        label: "Public Transport Access",
-        options: ["Close", "Average", "Far"],
-      },
-      {
-        name: "safety",
-        label: "Safety Level",
-        options: ["High", "Moderate", "Basic"],
-      },
-    ],
-  },
-  {
-    title: (
-      <>
-        <PeopleIcon sx={{ mr: 1 }} /> Tenant Info
-      </>
-    ),
-    fields: [
-      {
-        name: "pets",
-        label: "Pet Policy",
-        options: ["Allowed", "Not Allowed"],
-      },
-      {
-        name: "leaseCapacity",
-        label: "Lease Capacity",
-        options: ["1", "2", "3", "4+"],
-      },
-      { name: "roommates", label: "Roommate-Friendly", options: ["Yes", "No"] },
-    ],
-  },
-];
-
-// Google Maps component without using @react-google-maps/api
-const GoogleMapComponent = ({ position, onPositionChange, apiKey }) => {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markerRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Initialize Google Maps
-  useEffect(() => {
-    const initializeMap = async () => {
-      try {
-        setIsLoading(true);
-
-        // Use centralized loader
-        await loadGoogleMapsApi(apiKey);
-
-        if (!mapRef.current || !window.google || !window.google.maps) return;
-
-        // Validate position values and use defaults if invalid
-        const lat =
-          typeof position[1] === "number" && !isNaN(position[1])
-            ? position[1]
-            : 40.7128; // Default to New York
-        const lng =
-          typeof position[0] === "number" && !isNaN(position[0])
-            ? position[0]
-            : -74.006;
-
-        // Create map instance
-        const mapOptions = {
-          center: { lat, lng },
-          zoom: 14,
-          zoomControl: true,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-        };
-
-        // Create a new map instance
-        mapInstanceRef.current = new window.google.maps.Map(
-          mapRef.current,
-          mapOptions
-        );
-
-        // Create marker
-        markerRef.current = new window.google.maps.Marker({
-          position: { lat, lng },
-          map: mapInstanceRef.current,
-          draggable: true,
-        });
-
-        // Add marker drag event
-        window.google.maps.event.addListener(
-          markerRef.current,
-          "dragend",
-          (event) => {
-            const newPosition = {
-              lat: event.latLng.lat(),
-              lng: event.latLng.lng(),
-            };
-
-            onPositionChange(newPosition);
-          }
-        );
-
-        // Add map click event
-        window.google.maps.event.addListener(
-          mapInstanceRef.current,
-          "click",
-          (event) => {
-            const newPosition = {
-              lat: event.latLng.lat(),
-              lng: event.latLng.lng(),
-            };
-
-            // Update marker position
-            if (markerRef.current) {
-              markerRef.current.setPosition(newPosition);
-            }
-
-            onPositionChange(newPosition);
-          }
-        );
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading Google Maps:", error);
-        setIsLoading(false);
-      }
-    };
-
-    initializeMap();
-
-    // Cleanup
-    return () => {
-      if (mapInstanceRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners(
-          mapInstanceRef.current
-        );
-      }
-      if (markerRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners(markerRef.current);
-      }
-    };
-  }, [apiKey, onPositionChange]);
-
-  // Update map when position changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !markerRef.current || !window.google) return;
-
-    try {
-      // Validate position values and use defaults if invalid
-      const lat =
-        typeof position[1] === "number" && !isNaN(position[1])
-          ? position[1]
-          : 40.7128;
-      const lng =
-        typeof position[0] === "number" && !isNaN(position[0])
-          ? position[0]
-          : -74.006;
-
-      const newPosition = { lat, lng };
-
-      // Only update if position has changed significantly
-      if (Math.abs(lat) > 0.001 || Math.abs(lng) > 0.001) {
-        mapInstanceRef.current.setCenter(newPosition);
-      }
-
-      // Update marker position
-      markerRef.current.setPosition(newPosition);
-    } catch (error) {
-      console.error("Error updating map:", error);
-    }
-  }, [position]);
-
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-      }}
-    >
-      {isLoading && (
-        <Box
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "rgba(255, 255, 255, 0.7)",
-            zIndex: 2,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      )}
-      <Box
-        ref={mapRef}
-        sx={{
-          width: "100%",
-          height: "100%",
-        }}
-      />
-    </Box>
-  );
-};
-
-// Places Autocomplete component
-const PlacesAutocomplete = ({ onPlaceSelected, apiKey, initialValue = "" }) => {
-  const autocompleteInputRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [inputValue, setInputValue] = useState(initialValue);
-
-  // Initialize Google Maps and Places API
-  useEffect(() => {
-    const initializePlaces = async () => {
-      try {
-        setIsLoading(true);
-
-        // Use centralized loader with Places library
-        await loadGoogleMapsApi(apiKey, ["places"]);
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading Google Places API:", error);
-        setIsLoading(false);
-      }
-    };
-
-    initializePlaces();
-  }, [apiKey]);
-
-  // Initialize Places Autocomplete after API is loaded
-  useEffect(() => {
-    if (
-      isLoading ||
-      !autocompleteInputRef.current ||
-      !window.google ||
-      !window.google.maps ||
-      !window.google.maps.places
-    )
-      return;
-
-    try {
-      // Initialize the Google Places Autocomplete
-      const autocomplete = new window.google.maps.places.Autocomplete(
-        autocompleteInputRef.current,
-        {
-          types: ["address"],
-          componentRestrictions: { country: "us" }, // Limit to a specific country (optional)
-          fields: ["address_components", "formatted_address", "geometry"],
-        }
-      );
-
-      // Listen for place selection
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
-
-        if (!place.geometry) {
-          console.log("Returned place contains no geometry");
-          return;
-        }
-
-        // Pass the selected place back to the parent component
-        onPlaceSelected({
-          address: place.formatted_address,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        });
-
-        // Update the input value
-        setInputValue(place.formatted_address);
-      });
-
-      return () => {
-        // Cleanup
-        window.google.maps.event.clearInstanceListeners(autocomplete);
-      };
-    } catch (error) {
-      console.error("Error initializing Places Autocomplete:", error);
-    }
-  }, [isLoading, onPlaceSelected]);
-
-  // Update input value when initialValue changes
-  useEffect(() => {
-    setInputValue(initialValue);
-  }, [initialValue]);
-
-  const handleInputChange = (e) => {
-    setInputValue(e.target.value);
-  };
-
-  return (
-    <TextField
-      fullWidth
-      label="Address"
-      placeholder="Start typing to search for an address"
-      inputRef={autocompleteInputRef}
-      variant="outlined"
-      value={inputValue}
-      onChange={handleInputChange}
-      InputProps={{
-        endAdornment: (
-          <InputAdornment position="end">
-            {isLoading ? (
-              <CircularProgress size={20} />
-            ) : (
-              <LocationOnIcon color="action" />
-            )}
-          </InputAdornment>
-        ),
-      }}
-    />
-  );
-};
 
 const AgentApartmentForm = () => {
   const theme = useTheme();
@@ -475,6 +67,18 @@ const AgentApartmentForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState('');
+  
+  // New state variables for improved feedback
+  const [feedbackModal, setFeedbackModal] = useState({
+    open: false,
+    success: false,
+    message: "",
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   // Initialize Google Maps API on component mount
   useEffect(() => {
@@ -518,6 +122,7 @@ const AgentApartmentForm = () => {
 
     try {
       setUploadStatus('uploading');
+      setUploadProgress(0);
       console.log("Starting upload of", files.length, "files");
 
       const res = await axios.post(
@@ -539,6 +144,11 @@ const AgentApartmentForm = () => {
       console.log("Image URLs returned:", res.data.imageUrls);
       
       setUploadStatus('success');
+      setSnackbar({
+        open: true,
+        message: `Successfully uploaded ${files.length} ${files.length === 1 ? 'image' : 'images'}`,
+        severity: "success",
+      });
       
       // Process the URLs to ensure they have the correct format
       const processedUrls = res.data.imageUrls.map(url => {
@@ -553,7 +163,7 @@ const AgentApartmentForm = () => {
 
       setFormData((prev) => ({
         ...prev,
-        imageUrls: processedUrls,
+        imageUrls: [...prev.imageUrls, ...processedUrls],
       }));
     } catch (err) {
       setUploadStatus('error');
@@ -562,11 +172,12 @@ const AgentApartmentForm = () => {
         response: err.response?.data,
         status: err.response?.status,
       });
-      alert(
-        `❌ Failed to upload images: ${
-          err.response?.data?.message || err.message
-        }`
-      );
+      
+      setSnackbar({
+        open: true,
+        message: `Failed to upload images: ${err.response?.data?.message || err.message}`,
+        severity: "error",
+      });
     } finally {
       // Reset progress after a delay
       setTimeout(() => {
@@ -576,6 +187,19 @@ const AgentApartmentForm = () => {
         }
       }, 3000);
     }
+  };
+
+  const handleRemoveImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
+    }));
+    
+    setSnackbar({
+      open: true,
+      message: "Image removed",
+      severity: "info",
+    });
   };
 
   // Handle map marker position change
@@ -630,6 +254,19 @@ const AgentApartmentForm = () => {
     setGeocodingError("");
   }, []);
 
+  const resetForm = () => {
+    setFormData({
+      brokerEmail: "",
+      amenities: [],
+      images: [],
+      imageUrls: [],
+      location: {
+        coordinates: [0, 0],
+        address: "",
+      },
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -658,18 +295,15 @@ const AgentApartmentForm = () => {
 
       console.log("Apartment created successfully:", response.data);
       
-      alert("✅ Apartment listed successfully!");
-
-      // Clear form or redirect
-      setFormData({
-        amenities: [],
-        images: [],
-        imageUrls: [],
-        location: {
-          coordinates: [0, 0],
-          address: "",
-        },
+      // Show success feedback modal instead of alert
+      setFeedbackModal({
+        open: true,
+        success: true,
+        message: "Your apartment listing has been submitted successfully!",
       });
+
+      // Clear form
+      resetForm();
     } catch (err) {
       console.error("Submit error:", err);
       
@@ -680,12 +314,32 @@ const AgentApartmentForm = () => {
         console.error("Error headers:", err.response.headers);
       }
       
-      alert(
-        `❌ Failed to submit: ${err.response?.data?.message || err.message}`
-      );
+      // Show error feedback modal instead of alert
+      setFeedbackModal({
+        open: true,
+        success: false,
+        message: `Failed to submit: ${err.response?.data?.message || err.message}`,
+      });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCloseFeedbackModal = () => {
+    setFeedbackModal({
+      ...feedbackModal,
+      open: false,
+    });
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar({
+      ...snackbar,
+      open: false,
+    });
   };
 
   return (
@@ -702,308 +356,84 @@ const AgentApartmentForm = () => {
         </Typography>
 
         <form onSubmit={handleSubmit} encType="multipart/form-data">
-          {fieldGroups.map((group, idx) => (
-            <Box mt={4} key={idx}>
-              <Typography
-                variant="subtitle1"
-                fontWeight={600}
-                gutterBottom
-                color="text.primary"
-              >
-                {group.title}
-              </Typography>
-              <Grid container spacing={3}>
-                {group.fields.map((field) => (
-                  <Grid item xs={12} sm={6} key={field.name}>
-                    {field.options ? (
-                      <FormControl component="fieldset" fullWidth>
-                        <FormLabel
-                          component="legend"
-                          sx={{ fontSize: 14, mb: 1, color: "text.secondary" }}
-                        >
-                          {field.label}
-                        </FormLabel>
-                        <RadioGroup
-                          row
-                          name={field.name}
-                          value={formData[field.name] || ""}
-                          onChange={handleChange}
-                        >
-                          {field.options.map((opt) => (
-                            <FormControlLabel
-                              key={opt}
-                              value={opt}
-                              control={
-                                <Radio
-                                  sx={{
-                                    color: isDarkMode
-                                      ? "rgba(0, 179, 134, 0.7)"
-                                      : primaryColor,
-                                    "&.Mui-checked": { color: primaryColor },
-                                  }}
-                                />
-                              }
-                              label={opt}
-                              sx={{ color: "text.primary" }}
-                            />
-                          ))}
-                        </RadioGroup>
-                      </FormControl>
-                    ) : (
-                      <TextField
-                        fullWidth
-                        name={field.name}
-                        label={field.label}
-                        type={field.type || "text"}
-                        value={formData[field.name] || ""}
-                        onChange={handleChange}
-                        InputLabelProps={
-                          field.type === "date" ? { shrink: true } : {}
-                        }
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            "& fieldset": {
-                              borderColor: isDarkMode
-                                ? "rgba(255, 255, 255, 0.15)"
-                                : "rgba(0, 0, 0, 0.23)",
-                            },
-                            "&:hover fieldset": {
-                              borderColor: isDarkMode
-                                ? "rgba(255, 255, 255, 0.25)"
-                                : "rgba(0, 0, 0, 0.33)",
-                            },
-                            "&.Mui-focused fieldset": {
-                              borderColor: primaryColor,
-                            },
-                          },
-                        }}
-                      />
-                    )}
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          ))}
+          {/* Form Groups Component */}
+          <FormGroups 
+            formData={formData}
+            handleChange={handleChange}
+            isDarkMode={isDarkMode}
+            primaryColor={primaryColor}
+          />
 
-          <Box mt={5}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              color="text.primary"
-            >
-              <PlaceIcon sx={{ mr: 1 }} /> Location
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Start typing to search for an address, or click directly on the
-              map to set the location.
-            </Typography>
+          {/* Location Section Component */}
+          <LocationSection
+            formData={formData}
+            handlePositionChange={handlePositionChange}
+            handlePlaceSelected={handlePlaceSelected}
+            googleMapsApiKey={googleMapsApiKey}
+            geocodingError={geocodingError}
+          />
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={8}>
-                {/* Updated PlacesAutocomplete component */}
-                <PlacesAutocomplete
-                  onPlaceSelected={handlePlaceSelected}
-                  apiKey={googleMapsApiKey}
-                  initialValue={formData.location.address}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box
-                  display="flex"
-                  flexDirection="row"
-                  alignItems="center"
-                  gap={1}
-                >
-                  <TextField
-                    label="Longitude"
-                    type="number"
-                    InputProps={{ readOnly: true }}
-                    value={formData.location.coordinates[0]}
-                    size="small"
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    label="Latitude"
-                    type="number"
-                    InputProps={{ readOnly: true }}
-                    value={formData.location.coordinates[1]}
-                    size="small"
-                    sx={{ flex: 1 }}
-                  />
-                </Box>
-              </Grid>
-            </Grid>
+          {/* Amenities Section Component */}
+          <AmenitiesSection
+            formData={formData}
+            handleCheckboxChange={handleCheckboxChange}
+            isDarkMode={isDarkMode}
+            primaryColor={primaryColor}
+          />
 
-            {geocodingError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {geocodingError}
-              </Alert>
-            )}
+          {/* Image Upload Section Component */}
+          <ImageUploadSection
+            formData={formData}
+            handleFileChange={handleFileChange}
+            uploadProgress={uploadProgress}
+            uploadStatus={uploadStatus}
+            isDarkMode={isDarkMode}
+            primaryColor={primaryColor}
+            handleRemoveImage={handleRemoveImage}
+          />
 
-            <MapContainer>
-              <GoogleMapComponent
-                position={formData.location.coordinates}
-                onPositionChange={handlePositionChange}
-                apiKey={googleMapsApiKey}
-              />
-            </MapContainer>
-          </Box>
-
-          <Box mt={5}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              color="text.primary"
-            >
-              Amenities
-            </Typography>
-            <FormGroup row>
-              {amenitiesList.map((name) => (
-                <FormControlLabel
-                  key={name}
-                  control={
-                    <Checkbox
-                      checked={formData.amenities.includes(name)}
-                      onChange={handleCheckboxChange}
-                      name={name}
-                      sx={{
-                        color: isDarkMode
-                          ? "rgba(0, 179, 134, 0.7)"
-                          : primaryColor,
-                        "&.Mui-checked": { color: primaryColor },
-                      }}
-                    />
-                  }
-                  label={name}
-                  sx={{ color: "text.primary" }}
-                />
-              ))}
-            </FormGroup>
-          </Box>
-
-          <Box mt={4}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              color="text.primary"
-            >
-              <PhotoCameraIcon sx={{ mr: 1 }} /> Upload Apartment Images
-            </Typography>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{
-                marginTop: 8,
-                color: theme.palette.text.primary,
-              }}
-            />
-            
-            {uploadProgress > 0 && uploadProgress < 100 && (
-              <Box sx={{ width: '100%', mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Uploading: {uploadProgress}%
-                </Typography>
-                <Box 
-                  sx={{ 
-                    width: '100%', 
-                    height: 4, 
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    mt: 1
-                  }}
-                >
-                  <Box 
-                    sx={{ 
-                      width: `${uploadProgress}%`, 
-                      height: '100%',
-                      backgroundColor: primaryColor,
-                      transition: 'width 0.3s ease-in-out'
-                    }}
-                  />
-                </Box>
-              </Box>
-            )}
-            
-            {uploadStatus === 'success' && (
-              <Alert severity="success" sx={{ mt: 2 }}>
-                Images uploaded successfully
-              </Alert>
-            )}
-            
-            {uploadStatus === 'error' && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                Failed to upload images. Please try again.
-              </Alert>
-            )}
-            
-            {formData.imageUrls.length > 0 && (
-              <Box mt={2}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {formData.imageUrls.length} images uploaded
-                </Typography>
-                <Box display="flex" flexWrap="wrap" gap={1}>
-                  {formData.imageUrls.map((url, index) => {
-                    // Log the URL for debugging
-                    console.log(`Image URL ${index}:`, url);
-
-                    return (
-                      <Box
-                        key={index}
-                        component="img"
-                        src={url}
-                        alt={`Apartment ${index + 1}`}
-                        sx={{
-                          width: 100, 
-                          height: 100,
-                          objectFit: "cover",
-                          borderRadius: 1,
-                          border: "1px solid #eee",
-                        }}
-                        onError={(e) => {
-                          console.error(`Error loading image: ${url}`);
-                          e.target.src = "https://placehold.co/100x100?text=Error";
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-              </Box>
-            )}
-          </Box>
-
-          <Box mt={5}>
-            <Button
-              variant="contained"
-              fullWidth
-              type="submit"
-              disabled={isSubmitting}
-              endIcon={
-                isSubmitting ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : (
-                  <ArrowForwardIcon />
-                )
-              }
-              sx={{
-                py: 1.5,
-                borderRadius: 3,
-                fontSize: "1rem",
-                fontWeight: 600,
-                backgroundColor: primaryColor,
-                "&:hover": { backgroundColor: "#009e75" },
-              }}
-            >
-              {isSubmitting ? "Submitting..." : "Submit Apartment Listing"}
-            </Button>
-          </Box>
+          {/* Submit Section Component */}
+          <SubmitSection
+            isSubmitting={isSubmitting}
+            primaryColor={primaryColor}
+          />
         </form>
       </FormContainer>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        TransitionComponent={Slide}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Success/Error Modal */}
+      <FeedbackModal
+        open={feedbackModal.open}
+        onClose={handleCloseFeedbackModal}
+        success={feedbackModal.success}
+        message={feedbackModal.message}
+        primaryColor={primaryColor}
+      />
+
+      {/* Backdrop for geolocation loading */}
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={isGeocoding}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
     </Box>
   );
 };
