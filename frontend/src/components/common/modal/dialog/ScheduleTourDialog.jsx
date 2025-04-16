@@ -23,8 +23,6 @@ import { useSelector } from "react-redux";
 import axios from "axios";
 import dayjs from "dayjs";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 // Custom date picker that doesn't use MUI date pickers
 const SimpleDatePicker = ({ value, onChange, disablePast, error, helperText }) => {
   const today = new Date();
@@ -149,7 +147,7 @@ const ScheduleTourDialog = ({
       
       // Send the tour request
       await axios.post(
-        `${API_BASE_URL}/api/tours/schedule`,
+        "http://localhost:4000/api/tours/schedule",
         tourRequest,
         { withCredentials: true }
       );

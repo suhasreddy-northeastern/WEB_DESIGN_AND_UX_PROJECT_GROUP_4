@@ -33,8 +33,6 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import MessageIcon from "@mui/icons-material/Message";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 const BrokerListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -54,7 +52,7 @@ const BrokerListingDetail = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `${API_BASE_URL}/api/broker/listings/${id}`,
+          `http://localhost:4000/api/broker/listings/${id}`,
           {
             withCredentials: true,
           }
@@ -92,7 +90,7 @@ const BrokerListingDetail = () => {
 
     try {
       setIsDeleting(true);
-      await axios.delete(`${API_BASE_URL}/api/broker/listings/${id}`, {
+      await axios.delete(`http://localhost:4000/api/broker/listings/${id}`, {
         withCredentials: true,
       });
       setDeleteDialogOpen(false);
@@ -111,7 +109,7 @@ const BrokerListingDetail = () => {
   const handleToggleActive = async () => {
     try {
       const response = await axios.put(
-        `${API_BASE_URL}/api/broker/listings/${id}/toggle-active`,
+        `http://localhost:4000/api/broker/listings/${id}/toggle-active`,
         { isActive: !listing.isActive },
         { withCredentials: true }
       );
@@ -242,7 +240,7 @@ const BrokerListingDetail = () => {
               src={
                 listing.imageUrls[0].startsWith("http")
                   ? listing.imageUrls[0]
-                  : `${API_BASE_URL}${listing.imageUrls[0]}`
+                  : `http://localhost:4000${listing.imageUrls[0]}`
               }
               alt={`${bedrooms} in ${listing.neighborhood}`}
               sx={{
@@ -307,7 +305,7 @@ const BrokerListingDetail = () => {
                   key={index}
                   component="img"
                   src={
-                    url.startsWith("http") ? url : `${API_BASE_URL}${url}`
+                    url.startsWith("http") ? url : `http://localhost:4000${url}`
                   }
                   alt={`Apartment view ${index + 2}`}
                   sx={{

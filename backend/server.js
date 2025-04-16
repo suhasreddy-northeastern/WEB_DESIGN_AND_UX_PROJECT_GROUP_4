@@ -22,29 +22,19 @@ require('./src/utils/redisClient');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// ⚠️ ALLOW ALL ORIGINS: This is less secure but will fix your CORS issues
-app.use((req, res, next) => {
-  // Allow requests from any origin
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
+// ✅ Enable CORS with credentials
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
 
-// Body parsing middleware
+// ✅ Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware using MongoDB with more permissive settings for cross-origin cookies
+// ✅ Session middleware using MongoDB
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback_secret_for_development',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
@@ -53,13 +43,13 @@ app.use(session({
   }),
   cookie: {
     httpOnly: true,
-    secure: true, // Keep true for security, but ensure your site is HTTPS
-    sameSite: 'none', // Important for cross-origin requests
+    secure: false,
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 // 1 hour
   }
 }));
 
-// Connect to MongoDB
+// ✅ Connect to MongoDB
 require('./src/config/db');
 
 // Initialize system settings
@@ -74,18 +64,17 @@ require('./src/config/db');
 
 // Add the system routes
 app.use('/api/system', systemRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes); // Admin routes already have their own file
 
 // Add maintenance mode middleware for non-admin routes
 app.use(async (req, res, next) => {
   // ALWAYS allow these paths regardless of maintenance mode
   const allowedPaths = [
-    '/api/user/login',
-    '/api/user/logout',
-    '/api/user/create',
-    '/api/user/session',
-    '/api/system/maintenance-status',
-    '/api-docs'
+    '/api/user/login',       // Login API endpoint
+    '/api/user/logout',      // Logout API endpoint
+    '/api/user/session',     // Session check endpoint
+    '/api/system/maintenance-status',  // Maintenance status check
+    '/api-docs'              // API documentation
   ];
   
   // If the path is in the allowed list, always proceed
@@ -148,19 +137,9 @@ app.use('/api/admin', systemRoutes);
 // Swagger docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// Add error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
-
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
-  console.log(`CORS enabled for: ALL ORIGINS`);
 });
 
 module.exports = app;

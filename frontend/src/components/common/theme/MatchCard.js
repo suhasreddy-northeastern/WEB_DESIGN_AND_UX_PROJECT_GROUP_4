@@ -27,8 +27,6 @@ import DiamondIcon from "@mui/icons-material/Diamond";
 import WarningIcon from "@mui/icons-material/Warning";
 import ViewApartmentModal from "../modal/ViewApartmentModal";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 const MatchCard = ({
   apt,
   matchScore,
@@ -289,7 +287,7 @@ const MatchCard = ({
           <Box sx={{ width: { xs: "100%", md: 240 }, position: "relative" }}>
             <CardMedia
               component="img"
-              image={`${API_BASE_URL}${
+              image={`http://localhost:4000${
                 gallery[currentStep] || "/images/no-image.png"
               }`}
               alt="Apartment Preview"

@@ -22,8 +22,6 @@ import { logout } from "../../redux/userSlice";
 import { useColorMode } from "../../components/common/theme/ColorModeContext"; 
 import { useTheme } from "@mui/material/styles";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 const ProfileMenu = ({ user }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -40,7 +38,7 @@ const ProfileMenu = ({ user }) => {
   const handleLogout = async () => {
     handleClose();
     try {
-      await axios.post(`${API_BASE_URL}/api/user/logout`, {}, { withCredentials: true });
+      await axios.post("http://localhost:4000/api/user/logout", {}, { withCredentials: true });
       dispatch(logout());
       navigate("/login");
     } catch (error) {

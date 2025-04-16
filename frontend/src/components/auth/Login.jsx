@@ -20,8 +20,6 @@ import GoogleLoginButton from "../common/buttons/GoogleLoginButton";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-
-const API_BASE_URL = process.env.REACT_APP_API_URL;
 // Fixed Background Animation Component using inline styles instead of Tailwind classes
 const AnimatedBackground = () => {
   return (
@@ -151,7 +149,7 @@ const Login = () => {
   const fetchCompleteUserProfile = async () => {
     try {
       // This is the same API call that UserProfile uses to refresh data
-      const sessionRes = await axios.get(`${API_BASE_URL}/api/user/session`, {
+      const sessionRes = await axios.get('http://localhost:4000/api/user/session', {
         withCredentials: true
       });
       
@@ -175,7 +173,7 @@ const Login = () => {
     
     try {
       // Regular login API call
-      const res = await axios.post(`${API_BASE_URL}/api/user/login`, 
+      const res = await axios.post('http://localhost:4000/api/user/login', 
         { email, password }, 
         { withCredentials: true }
       );
@@ -186,7 +184,7 @@ const Login = () => {
       if (userData && userData.type === 'broker') {
         try {
           // Make an additional API call to get broker-specific data
-          const brokerRes = await axios.get(`${API_BASE_URL}/api/broker/me`, {
+          const brokerRes = await axios.get('http://localhost:4000/api/broker/me', {
             withCredentials: true
           });
           

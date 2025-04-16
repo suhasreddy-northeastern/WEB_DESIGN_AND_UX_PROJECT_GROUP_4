@@ -34,8 +34,6 @@ import {
   reverseGeocode,
 } from "../../components/map/GoogleMapsLoader";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 // Note: Add the following to your package.json:
 // "@react-google-maps/api": "^2.19.2"
 
@@ -523,7 +521,7 @@ const AgentApartmentForm = () => {
       console.log("Starting upload of", files.length, "files");
 
       const res = await axios.post(
-        `${API_BASE_URL}"/api/apartments/upload-images`,
+        "http://localhost:4000/api/apartments/upload-images",
         data,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -549,7 +547,7 @@ const AgentApartmentForm = () => {
           return url;
         } else {
           // Make sure the URL starts with a single slash
-          return `${API_BASE_URL}${url.startsWith('/') ? url : `/${url}`}`;
+          return `http://localhost:4000${url.startsWith('/') ? url : `/${url}`}`;
         }
       });
 
@@ -654,7 +652,7 @@ const AgentApartmentForm = () => {
       // Log what we're sending to the server
       console.log("Submitting apartment data:", submission);
 
-      const response = await axios.post(`${API_BASE_URL}/api/apartments`, submission, {
+      const response = await axios.post("http://localhost:4000/api/apartments", submission, {
         withCredentials: true,
       });
 
